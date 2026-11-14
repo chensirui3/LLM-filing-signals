@@ -26,7 +26,7 @@ Paragraphs are matched by embedding similarity (nomic-embed-text). The one-line 
 
 > Any further delays in regulatory approval of the 737 MAX, the resumption of 737 production and/or deliveries, further disruptions to suppliers and/or the long-term health of the production system, supplier claims or assertions, or changes to estimated concessions or other considerations we expect to provide to customers could have a material adverse effect on our financial position, results of operations, and/or cash flows. The FAA and other non-U.S. civil aviation authorities will determine the timing and conditions of return to service in each relevant jurisdiction. We have assumed that …
 
-**Uncertainty in production estimates and assumptions could have a material impact on the company's financial position and results.**
+**Changes in estimates and assumptions about the 737 program could have a material impact on the company's financial position and results.**
 
 *Under: The 737 MAX fleet is currently grounded, and we have temporarily suspended production of the 737 MAX. We are subject to a number of risks and uncertainties related to the 737 MAX. These risks include uncertainties …*
 

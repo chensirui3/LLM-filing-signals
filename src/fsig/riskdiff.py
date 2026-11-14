@@ -26,7 +26,7 @@ from difflib import SequenceMatcher
 import numpy as np
 import pandas as pd
 
-from .config import REPORTS
+from .config import REPORTS, ROOT
 from .embed import embed_texts
 from .extract import ollama_chat
 from .edgar import filing_path
@@ -177,9 +177,132 @@ def _excerpt(text: str, n: int = 600) -> str:
     return text if len(text) <= n else text[:n].rsplit(" ", 1)[0] + " …"
 
 
+# ----------------------------------------------------------------- threshold validation
+
+VALIDATION = ROOT / "validation" / "riskdiff_pairs.csv"
+COS_BINS = [0.0, 0.85, 0.90, 0.93, 0.96, 1.01]
+
+
+def sample_pairs(filings: pd.DataFrame, emb: dict, specs: list[tuple[str, int]], n: int, seed: int = 0) -> pd.DataFrame:
+    """Paragraph pairs for checking the TOPIC threshold.
+
+    For each (ticker, filing year) in specs, takes every current paragraph whose
+    wording differs from its closest previous paragraph (word ratio below
+    EDITED), which are the cases the embedding threshold has to decide. Returns
+    n pairs spread evenly over the cosine ranges in COS_BINS, with an empty
+    `label` column to be filled in: 1 if the current paragraph is a rewrite of
+    the previous one (same specific content), 0 if it is new content.
+    """
+    rows = []
+    for ticker, year in specs:
+        try:
+            prev, cur = pick_filings(filings, ticker, year)
+        except SystemExit as e:
+            print(f"skipped {ticker} {year}: {e}")
+            continue
+        old = [p["text"] for p in load_paragraphs(prev.cik, prev.accession)]
+        new = [p["text"] for p in load_paragraphs(cur.cik, cur.accession)]
+        sim = _embed(emb, new) @ _embed(emb, old).T
+        for j, text in enumerate(new):
+            i = int(sim[j].argmax())
+            ratio = word_ratio(old[i], text)
+            if ratio < EDITED:
+                rows.append({"id": f"{ticker}-{year}-{j}", "ticker": ticker, "year": year, "cos": float(sim[j, i]),
+                             "ratio": ratio, "previous": old[i], "current": text})
+    pool = pd.DataFrame(rows)
+    pool["bin"] = pd.cut(pool["cos"], COS_BINS, right=False)
+    per_bin = n // (len(COS_BINS) - 1)
+    picked = [g.sample(min(per_bin, len(g)), random_state=seed) for _, g in pool.groupby("bin", observed=True)]
+    return pd.concat(picked).drop(columns="bin").assign(label="").sort_values("id").reset_index(drop=True)
+
+
+def threshold_table(pairs: pd.DataFrame, thresholds: tuple[float, ...] = (0.85, 0.88, 0.90, 0.91, 0.92, 0.93, 0.94,
+                                                                         0.95, 0.96)) -> pd.DataFrame:
+    """Accuracy of "cosine >= threshold means rewritten" against the labels.
+
+    precision  share of pairs called rewritten that are rewrites
+    recall     share of rewrites that are called rewritten
+    """
+    y, rows = pairs["label"].astype(int).to_numpy() == 1, []
+    for t in thresholds:
+        pred = pairs["cos"].to_numpy() >= t
+        tp, fp, fn = int((pred & y).sum()), int((pred & ~y).sum()), int((~pred & y).sum())
+        precision = tp / (tp + fp) if tp + fp else float("nan")
+        recall = tp / (tp + fn) if tp + fn else float("nan")
+        rows.append({"threshold": t, "called_rewritten": int(pred.sum()), "precision": precision, "recall": recall,
+                     "f1": 2 * precision * recall / (precision + recall) if precision + recall else float("nan"),
+                     "accuracy": float((pred == y).mean())})
+    return pd.DataFrame(rows)
+
+
+def validation_report(table_writer) -> str:
+    """Write reports/riskdiff_validation.md from the labelled pairs and return its path.
+
+    table_writer turns a DataFrame into a markdown table (report._md).
+    """
+    pairs = pd.read_csv(VALIDATION)
+    clear = pairs[pairs["borderline"] == 0]
+    by_range = (pairs.assign(cosine=pd.cut(pairs["cos"], COS_BINS, right=False).astype(str))
+                .groupby("cosine")["label"].agg(pairs="size", share_rewrites="mean").reset_index())
+    at = threshold_table(pairs, (TOPIC,)).iloc[0]
+    out = [
+        "# Risk Factors comparison: validation of the similarity threshold", "",
+        f"The comparison tool calls a paragraph *rewritten* rather than *added* when its wording differs from the "
+        f"closest paragraph in the previous filing but their embedding cosine is at least {TOPIC}. That threshold "
+        "was chosen by inspecting one company (NVIDIA). This report tests it on other companies.", "",
+        f"**Sample.** {len(pairs)} paragraph pairs from {pairs['ticker'].nunique()} companies "
+        f"({', '.join(sorted(pairs['ticker'].unique()))}), none of them NVIDIA. Each pair is a current paragraph "
+        f"and its closest previous paragraph, restricted to pairs whose wording differs (word-level similarity "
+        f"below {EDITED}), which are the cases the threshold decides. Equal numbers were drawn from five cosine "
+        "ranges, so borderline cases are over-represented relative to a real filing.", "",
+        "**Labels.** Each pair was labelled 1 if the current paragraph restates the specific content of the "
+        "previous one (including a condensed or expanded version, or a fragment of it) and 0 if it is new "
+        "content, even on the same broad theme. The labels were assigned by an LLM assistant (Claude) reading the "
+        "pairs in random order without the cosine values, and have not been independently checked by a second "
+        f"annotator. {int(pairs['borderline'].sum())} close calls are flagged `borderline` in "
+        "`validation/riskdiff_pairs.csv`.", "",
+        f"**Result at the threshold in use ({TOPIC}).** Precision {at['precision']:.0%}, recall "
+        f"{at['recall']:.0%}: of the paragraphs the tool calls rewritten, {at['precision']:.0%} are rewrites, and "
+        f"it finds {at['recall']:.0%} of all rewrites. The remaining rewrites are reported as added.", "",
+        "## Accuracy by threshold", "", table_writer(threshold_table(pairs)), "",
+        "Excluding the borderline pairs:", "", table_writer(threshold_table(clear)), "",
+        "## Share of pairs labelled as rewrites, by cosine range", "", table_writer(by_range), "",
+        "## Reading the result", "",
+        "- Cosine similarity orders the pairs well: almost none below 0.85 are rewrites and all of those above "
+        "0.96 are.",
+        f"- A threshold of 0.92 scores slightly higher on this sample than {TOPIC}. The difference is within the "
+        f"sampling error of {len(pairs)} pairs, and adopting it would mean tuning on the test set, so the "
+        "threshold is unchanged.",
+        "- Many low-similarity pairs in the sample are fragments: the parser splits a paragraph where the "
+        "filing has a page break, and the fragment is then compared with a whole paragraph. Joining paragraphs "
+        "across page breaks would remove most of these.", ""]
+    REPORTS.mkdir(exist_ok=True)
+    path = REPORTS / "riskdiff_validation.md"
+    path.write_text("\n".join(out), encoding="utf-8")
+    return str(path)
+
+
 def risk_diff(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, llm: dict | None,
               max_items: int = 12) -> str:
     """Write reports/riskdiff_<TICKER>_<year>.md and return its path."""
+    name, text = render(filings, ticker, year, emb, llm, max_items)
+    REPORTS.mkdir(exist_ok=True)
+    path = REPORTS / f"{name}.md"
+    path.write_text(text, encoding="utf-8")
+    return str(path)
+
+
+def available(filings: pd.DataFrame) -> dict[str, list[int]]:
+    """Tickers that can be compared, each with the filing years that have an earlier 10-K to compare with."""
+    k = filings[filings["form"] == "10-K"].sort_values("filing_date")
+    k = k[[load_section(a, "risk") is not None for a in k["accession"]]]
+    years = k.groupby("ticker")["filing_date"].apply(lambda d: sorted(d.dt.year)[1:])
+    return {t: y for t, y in years.items() if y}
+
+
+def render(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, llm: dict | None,
+           max_items: int = 12) -> tuple[str, str]:
+    """Compare a 10-K's Risk Factors with the previous year's. Returns (report name, markdown)."""
     prev, cur = pick_filings(filings, ticker, year)
     old_p, new_p = (load_paragraphs(r.cik, r.accession) for r in (prev, cur))
     old, new = [p["text"] for p in old_p], [p["text"] for p in new_p]
@@ -245,7 +368,4 @@ def risk_diff(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, l
     if len(by["edited"]) > max_items:
         out += [f"…and {len(by['edited']) - max_items} more.", ""]
 
-    REPORTS.mkdir(exist_ok=True)
-    path = REPORTS / f"riskdiff_{cur.ticker}_{cur.filing_date.year}.md"
-    path.write_text("\n".join(out), encoding="utf-8")
-    return str(path)
+    return f"riskdiff_{cur.ticker}_{cur.filing_date.year}", "\n".join(out)

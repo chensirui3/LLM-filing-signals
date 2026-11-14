@@ -115,10 +115,24 @@ as long as a short paragraph. Examples:
   metaverse strategy and blockchain-based payment initiatives appear as added
   risks.
 
+A browser front end lets you pick any company and year in the universe. It
+needs the downloaded filings and a running Ollama server:
+
+```powershell
+.venv\Scripts\python -m pip install -e .[app]
+.venv\Scripts\python -m streamlit run app.py
+```
+
 The similarity threshold that separates "rewritten" from "added" (0.93) was
-chosen by inspecting matched pairs for one company and has not been validated
-on labelled data. The LLM summaries may be inaccurate; the quoted filing text
-is authoritative.
+chosen by inspecting matched pairs for NVIDIA. It was then tested on 120
+labelled paragraph pairs from 16 other companies: of the paragraphs the tool
+calls rewritten, 90% are rewrites, and it finds 68% of all rewrites; the rest
+are reported as added. The sample deliberately over-represents hard cases, and
+the labels were assigned by an LLM assistant without a second annotator. See
+[reports/riskdiff_validation.md](reports/riskdiff_validation.md); the pairs and
+labels are in `validation/riskdiff_pairs.csv`, and `python -m fsig riskeval`
+rebuilds the report. The LLM summaries may be inaccurate; the quoted filing
+text is authoritative.
 
 ## Method
 
@@ -291,6 +305,8 @@ src/fsig/leakage.py     memory and identity probes, memory controls
 src/fsig/robustness.py  lag and cost sensitivity, raw vs anonymised comparison
 src/fsig/riskdiff.py    year-over-year Risk Factors comparison
 src/fsig/report.py      markdown reports and charts
+app.py                  browser front end for the Risk Factors comparison
+validation/             labelled paragraph pairs for the comparison threshold
 tests/                  unit tests for parsing, timing, signals and probes
 reports/                generated reports, charts and example comparisons
 data/                   filing index, signal tables and LLM response cache (other data is not tracked)

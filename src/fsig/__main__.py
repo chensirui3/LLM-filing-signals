@@ -12,6 +12,7 @@ Steps, in order:
   leakage    run the memory and identity probes, append them to the report
   robustness entry-lag and cost sensitivity; raw vs anonymised score comparison
   riskdiff   what changed in a company's Risk Factors vs last year  (--ticker NVDA [--year 2023])
+  riskeval   accuracy of the riskdiff similarity threshold on the labelled pairs in validation/
   all        universe -> report
 """
 from __future__ import annotations
@@ -34,7 +35,7 @@ def rebuild_reports(cfg: dict, px: pd.DataFrame) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(prog="fsig", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=["universe", "download", "parse", "prices", "extract", "embed",
-                                     "signals", "report", "leakage", "robustness", "riskdiff", "all"])
+                                     "signals", "report", "leakage", "robustness", "riskdiff", "riskeval", "all"])
     ap.add_argument("--ticker", help="riskdiff: company ticker")
     ap.add_argument("--year", type=int, help="riskdiff: filing year of the 10-K (default: latest)")
     ap.add_argument("--no-summary", action="store_true", help="riskdiff: skip the LLM one-line summaries")
@@ -95,6 +96,8 @@ def main() -> None:
             print(f"\n{model} (cutoff {r['cutoff']})\n{r['summary'].to_string()}\n{r['controls'].to_string()}")
         print(ident_summary.to_string())
         rebuild_reports(cfg, px)
+    if args.step == "riskeval":
+        print("wrote", riskdiff.validation_report(report._md))
     if args.step == "riskdiff":
         if not args.ticker:
             ap.error("riskdiff needs --ticker")

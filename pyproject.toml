@@ -25,6 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+app = ["streamlit"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

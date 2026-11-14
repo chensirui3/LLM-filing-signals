@@ -17,3 +17,6 @@ data/*
 
 # Trial runs made with FSIG_HOME
 quickstart/
+
+# Local tool settings
+.claude/

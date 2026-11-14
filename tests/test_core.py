@@ -257,3 +257,13 @@ def test_headings_come_from_formatting_not_length():
     # Without formatting, the long heading is treated as a paragraph and the previous heading is kept.
     without = paragraphs(text)
     assert len(without) == 3 and without[2]["heading"] == "Risks Related to Our Global Operating Business"
+
+
+def test_threshold_table_measures_precision_and_recall():
+    from fsig.riskdiff import threshold_table
+
+    pairs = pd.DataFrame({"cos": [0.99, 0.95, 0.94, 0.91, 0.80], "label": [1, 1, 0, 1, 0]})
+    t = threshold_table(pairs, (0.93, 0.90)).set_index("threshold")
+    assert t.loc[0.93, "called_rewritten"] == 3 and np.isclose(t.loc[0.93, "precision"], 2 / 3)
+    assert np.isclose(t.loc[0.93, "recall"], 2 / 3) and np.isclose(t.loc[0.90, "recall"], 1.0)
+    assert np.isclose(t.loc[0.90, "accuracy"], 0.8)

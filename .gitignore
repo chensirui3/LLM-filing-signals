@@ -1,7 +1,19 @@
 .venv/
 .env
-data/
 __pycache__/
 *.egg-info/
 .pytest_cache/
 *.log
+
+# Downloaded filings, parsed sections, embeddings and prices are not tracked.
+# The small result tables and the LLM response cache are, so the analysis can
+# be re-run without a GPU.
+data/*
+!data/universe.parquet
+!data/filings.parquet
+!data/signals_raw.parquet
+!data/signals_anon.parquet
+!data/llm_cache.sqlite
+
+# Trial runs made with FSIG_HOME
+quickstart/

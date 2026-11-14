@@ -6,8 +6,11 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA = ROOT / "data"
-REPORTS = ROOT / "reports"
+# Set FSIG_HOME to keep a run's data and reports in a separate folder, for
+# example a small trial run that must not overwrite the full results.
+HOME = (ROOT / os.environ["FSIG_HOME"]) if os.environ.get("FSIG_HOME") else ROOT
+DATA = HOME / "data"
+REPORTS = HOME / "reports"
 
 
 def load_config(path: str | Path | None = None) -> dict:

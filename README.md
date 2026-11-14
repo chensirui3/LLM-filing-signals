@@ -1,5 +1,7 @@
 # Filing signals
 
+[![tests](https://github.com/chensirui3/LLM-filing-signals/actions/workflows/tests.yml/badge.svg)](https://github.com/chensirui3/LLM-filing-signals/actions/workflows/tests.yml)
+
 Do signals that a local LLM extracts from SEC filings predict stock returns, and
 can an apparent result be separated from the model recalling outcomes it saw
 during training?
@@ -186,6 +188,47 @@ ollama pull llama2:7b
 Every step caches its output in `data/` and resumes if interrupted. Results
 are written to `reports/`.
 
+To install the exact package versions behind the published results, use
+`requirements-lock.txt` in place of the second command above:
+
+```powershell
+.venv\Scripts\python -m pip install -r requirements-lock.txt
+.venv\Scripts\python -m pip install -e . --no-deps
+```
+
+### Trial run
+
+A small run exercises every step in 10 to 15 minutes. Setting `FSIG_HOME`
+keeps its data and reports in a separate folder, so it does not overwrite the
+full results:
+
+```powershell
+$env:FSIG_HOME = "quickstart"
+.venv\Scripts\python -m fsig all --size 12 --start 2022-01-01
+$env:FSIG_HOME = $null
+```
+
+With 12 companies the statistics are not meaningful; the run only shows that
+the pipeline works.
+
+### Rebuilding the reports without a GPU
+
+The repository includes the filing index, the per-filing signal tables and the
+cache of every LLM response (`data/`), which is all the backtest needs apart
+from prices. With no Ollama installation and no filings downloaded:
+
+```powershell
+.venv\Scripts\python -m fsig prices       # about a minute; downloads from Yahoo Finance
+.venv\Scripts\python -m fsig report
+.venv\Scripts\python -m fsig report --variant anon
+.venv\Scripts\python -m fsig robustness
+```
+
+Because prices are downloaded afresh and Yahoo revises adjusted prices, the
+rebuilt tables can differ from the published ones in the third decimal place.
+Price data is not redistributed here. The leakage step still needs Ollama and
+the downloaded filings.
+
 Approximate run times on an RTX 4090 for the default 100 companies from 2015:
 download about 70 minutes (EDGAR rate limit), LLM scoring about 3 hours (0.75 s
 per chunk with 4 parallel requests), embedding about 2 hours when sharing the
@@ -250,6 +293,9 @@ src/fsig/riskdiff.py    year-over-year Risk Factors comparison
 src/fsig/report.py      markdown reports and charts
 tests/                  unit tests for parsing, timing, signals and probes
 reports/                generated reports, charts and example comparisons
+data/                   filing index, signal tables and LLM response cache (other data is not tracked)
+requirements-lock.txt   exact package versions used for the published results
+.github/workflows/      runs the unit tests on every push
 ```
 
 ## License

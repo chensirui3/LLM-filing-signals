@@ -30,11 +30,16 @@ _XML_DECL = re.compile(r"^\s*<\?xml[^>]*\?>")
 _SPACES = re.compile(r"[ \t  -​ 　]+")
 
 
-def html_to_text(raw: bytes) -> str:
-    """Visible text with line breaks only at block boundaries.
+_EMPH_TAGS = {"b", "strong", "i", "em", "u"}
+_EMPH_STYLE = re.compile(r"font-weight\s*:\s*(?:bold|[6-9]00)|font-style\s*:\s*italic|text-decoration\s*:\s*underline", re.I)
 
-    Inline elements are joined without a separator because filings often split
-    a single word across <span>s; table cells get a space.
+
+def _walk(raw: bytes) -> list[tuple[str, bool]]:
+    """Visible text pieces in document order, each flagged if bold/italic/underlined.
+
+    Line breaks are emitted only at block boundaries. Inline elements are joined
+    without a separator because filings often split a single word across
+    <span>s; table cells get a space.
     """
     # Decode ourselves: without a charset declaration lxml assumes Latin-1 and
     # mangles curly apostrophes, which breaks the "Management's" header match.
@@ -56,25 +61,51 @@ def html_to_text(raw: bytes) -> str:
         if el.getparent() is not None:
             el.drop_tree()
 
-    parts: list[str] = []
+    parts: list[tuple[str, bool]] = []
+    depth = 0  # how many enclosing elements are emphasised
     for event, el in etree.iterwalk(tree, events=("start", "end")):
         tag = el.tag.lower() if isinstance(el.tag, str) else ""
+        emph = tag in _EMPH_TAGS or (bool(tag) and bool(_EMPH_STYLE.search(el.get("style") or "")))
         if event == "start":
+            depth += emph
             if tag in _BLOCK:
-                parts.append("\n")
+                parts.append(("\n", False))
             if tag and el.text:
-                parts.append(el.text)
+                parts.append((el.text, depth > 0))
         else:
+            depth -= emph
             if tag in _BLOCK:
-                parts.append("\n")
+                parts.append(("\n", False))
             elif tag in ("td", "th"):
-                parts.append(" ")
+                parts.append((" ", False))
             if el.tail:
-                parts.append(el.tail)
+                parts.append((el.tail, depth > 0))
+    return parts
 
-    text = "".join(parts).replace("\r", "\n").translate(_C1)
+
+def html_to_text(raw: bytes) -> str:
+    """Visible text, one line per block element."""
+    text = "".join(t for t, _ in _walk(raw)).replace("\r", "\n").translate(_C1)
     lines = (_SPACES.sub(" ", ln).strip() for ln in text.split("\n"))
     return "\n".join(ln for ln in lines if ln)
+
+
+def emphasised_lines(raw: bytes, min_share: float = 0.9) -> set[str]:
+    """Lines of html_to_text(raw) that are almost entirely bold, italic or underlined.
+
+    Filings mark headings with formatting rather than heading tags, so this is
+    how a heading is told apart from a short paragraph.
+    """
+    parts = _walk(raw)
+    text = "".join(t for t, _ in parts).replace("\r", "\n").translate(_C1)
+    mask = "".join(("1" if e else "0") * len(t) for t, e in parts)
+    out, pos = set(), 0
+    for ln in text.split("\n"):
+        flags = [m for ch, m in zip(ln, mask[pos : pos + len(ln)]) if not ch.isspace()]
+        pos += len(ln) + 1
+        if flags and flags.count("1") / len(flags) >= min_share:
+            out.add(_SPACES.sub(" ", ln).strip())
+    return out
 
 
 _SEP = r"[\s\.\:\-–—]*"

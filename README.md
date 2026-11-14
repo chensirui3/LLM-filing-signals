@@ -62,7 +62,10 @@ since last year's 10-K?
 
 Paragraphs are matched by meaning with embeddings, then sorted into unchanged,
 edited (shown as a word diff), rewritten, added and removed. The local LLM
-writes a one-line summary of each added and removed risk. Examples:
+writes a one-line summary of each added and removed risk. Each paragraph is
+shown under its risk-factor heading; headings are recognised by their bold or
+italic formatting in the filing, since many are full sentences as long as a
+short paragraph. Examples:
 
 - [NVIDIA, 10-K filed February 2023](reports/riskdiff_NVDA_2023.md): the new
   US export licence requirements for China and the move of operations out of

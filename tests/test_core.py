@@ -189,3 +189,27 @@ def test_risk_diff_classifies_paragraphs():
     text = "Risks Related to Supply\n" + base + "\nmanufacturing yields; and\n" + cyber
     paras = paragraphs(text)
     assert len(paras) == 2 and paras[1]["heading"] == "Risks Related to Supply"  # the list item is not a heading
+
+
+def test_headings_come_from_formatting_not_length():
+    from fsig.riskdiff import paragraphs
+    from fsig.sections import emphasised_lines, html_to_text
+
+    long_heading = ("Product, system security, and data breaches and cyber-attacks could disrupt our operations, reduce "
+                    "our expected revenue, increase our expenses, and significantly harm our business and reputation.")
+    body = "Security breaches, computer malware and phishing attacks have become more prevalent and sophisticated. " * 3
+    raw = _page("<p><b>Risks Related to Our Global Operating Business</b></p>",
+                "<p>" + body.replace("Security", "Economic") + "</p>",
+                '<p><span style="font-weight:700">Product, system security, and data breaches</span>'
+                '<span style="font-weight:700">' + long_heading[len("Product, system security, and data breaches"):] + "</span></p>",
+                "<p>" + body + "</p>")
+    assert len(long_heading) > 150
+    em = emphasised_lines(raw)
+    assert long_heading in em and body.strip() not in em
+
+    text = html_to_text(raw)
+    with_fmt = paragraphs(text, em)
+    assert [p["heading"] for p in with_fmt] == ["Risks Related to Our Global Operating Business", long_heading]
+    # Without formatting the long heading is mistaken for a paragraph and the stale heading sticks.
+    without = paragraphs(text)
+    assert len(without) == 3 and without[2]["heading"] == "Risks Related to Our Global Operating Business"

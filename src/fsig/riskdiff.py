@@ -17,6 +17,7 @@ removed risk. Everything is computed from the two filings alone.
 """
 from __future__ import annotations
 
+import gzip
 import re
 from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
@@ -27,7 +28,8 @@ import pandas as pd
 from .config import REPORTS
 from .embed import embed_texts
 from .extract import ollama_chat
-from .sections import load_section
+from .edgar import filing_path
+from .sections import emphasised_lines, load_section
 
 MIN_PARA_CHARS = 150   # shorter lines are headings, bullets from the summary, page furniture
 # TOPIC was set by reading matched pairs: with nomic-embed-text, two unrelated
@@ -47,17 +49,43 @@ SUMMARY_SYSTEM = (
 SUMMARY_SCHEMA = {"type": "object", "properties": {"summary": {"type": "string"}}, "required": ["summary"]}
 
 
-def paragraphs(text: str) -> list[dict]:
-    """Body paragraphs, each with the nearest heading above it."""
+MAX_HEADING_CHARS = 800  # some filers (Boeing) write a whole bold paragraph as the heading
+
+
+def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
+    """Body paragraphs, each with the nearest heading above it.
+
+    `emphasised` is the set of lines the filing prints in bold, italic or
+    underline (sections.emphasised_lines). Risk-factor headings are often full
+    sentences of 150-400 characters, so length cannot tell them from body text;
+    formatting can. Without it, any short capitalised line counts as a heading.
+    """
+    lines = [(ln.strip(), _BULLET.sub("", ln).strip()) for ln in text.split("\n")]
+    emphasised = emphasised or set()
+    marked = [raw in emphasised and len(ln) <= MAX_HEADING_CHARS for raw, ln in lines]
+    # Trust the formatting only if it picks out a plausible share of lines:
+    # none means it was not detected, most means the whole section is bold.
+    use_format = 0 < sum(marked) <= 0.5 * len(lines)
+
     out, heading = [], ""
-    for ln in text.split("\n"):
-        ln = _BULLET.sub("", ln).strip()
-        if len(ln) >= MIN_PARA_CHARS:
+    for (_, ln), is_marked in zip(lines, marked):
+        if ln.lower().startswith(("table of contents", "item 1a")):
+            continue
+        if use_format and is_marked and len(ln) >= 4:
+            heading = _excerpt(ln, 220)
+        elif len(ln) < 15:
+            continue
+        elif len(ln) >= MIN_PARA_CHARS:
             out.append({"heading": heading, "text": ln})
-        elif (15 <= len(ln) and ln[0].isupper() and not _NOT_HEADING.search(ln)
-              and not ln.lower().startswith(("table of contents", "item 1a"))):
+        elif not use_format and ln[0].isupper() and not _NOT_HEADING.search(ln):
             heading = ln  # list items (lower-case start, or ending in ';' / 'and') are not headings
     return out
+
+
+def load_paragraphs(cik: int, accession: str) -> list[dict]:
+    with gzip.open(filing_path(cik, accession), "rb") as f:
+        emphasised = emphasised_lines(f.read())
+    return paragraphs(load_section(accession, "risk"), emphasised)
 
 
 def word_ratio(a: str, b: str) -> float:
@@ -125,7 +153,11 @@ def _summaries(llm: dict, texts: list[str]) -> list[str]:
 def pick_filings(filings: pd.DataFrame, ticker: str, year: int | None) -> tuple:
     """(previous 10-K, chosen 10-K) rows. year is the filing year; default latest."""
     k = filings[(filings["ticker"] == ticker.upper()) & (filings["form"] == "10-K")].sort_values("filing_date")
+    if k.empty:
+        raise SystemExit(f"{ticker} has no 10-K in the filing index (it may not be in the universe).")
     k = k[[load_section(a, "risk") is not None for a in k["accession"]]].reset_index(drop=True)
+    if k.empty:
+        raise SystemExit(f"No {ticker} 10-K has a parsed Risk Factors section.")
     if year is not None:
         hit = k.index[k["filing_date"].dt.year == year]
         if len(hit) == 0:
@@ -147,7 +179,7 @@ def risk_diff(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, l
               max_items: int = 12) -> str:
     """Write reports/riskdiff_<TICKER>_<year>.md and return its path."""
     prev, cur = pick_filings(filings, ticker, year)
-    old_p, new_p = (paragraphs(load_section(r.accession, "risk")) for r in (prev, cur))
+    old_p, new_p = (load_paragraphs(r.cik, r.accession) for r in (prev, cur))
     old, new = [p["text"] for p in old_p], [p["text"] for p in new_p]
     rows, removed = classify(old, new, _embed(emb, old), _embed(emb, new))
 

@@ -1,55 +1,55 @@
 # NVIDIA CORP (NVDA): what changed in Risk Factors
 
 10-K filed 2023-02-24 compared with the 10-K filed 2022-03-18.
-Paragraphs: 97 last year, 119 this year.
+Paragraphs: 82 last year, 104 this year.
 
 | | paragraphs | share of this year's text |
 |---|---|---|
-| unchanged | 20 | 8% |
-| edited | 42 | 50% |
-| rewritten | 18 | 15% |
-| added | 39 | 27% |
-| removed (from last year) | 24 | |
+| unchanged | 11 | 5% |
+| edited | 33 | 49% |
+| rewritten | 13 | 15% |
+| added | 47 | 30% |
+| removed (from last year) | 23 | |
 
 Matching is by embedding similarity (nomic-embed-text); one-line summaries are written by llama3.1:8b and can be wrong. Read the quoted text.
 
-## New this year (39)
+## New this year (47)
 
 **NVIDIA may be disadvantaged by new US government license requirements that apply to its products but not those of its competitors.**
 
-*Under: Risks Related to Regulatory, Legal, Our Stock and Other Matters*
+*Under: Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.*
 
 > We have engaged with customers in China to provide alternative products not subject to the new license requirements, such as our new A800 offering. To the extent that a customer requires products covered by the new license requirements, we may seek a license for the customer but have no assurance that the USG will grant any exemptions or licenses for any customer, or that the USG will act on them in a timely manner. The new requirements may have a disproportionate impact on NVIDIA and may disadvantage NVIDIA against certain of our competitors who sell products that are not subject to the new …
 
 **NVIDIA AI cloud services may not be successful.**
 
-*Under: Our accelerated computing platforms experience rapid changes in technology, customer requirements, competitive products, and industry standards.*
+*Under: Failure to meet the evolving needs of our industry and markets may adversely impact our financial results.*
 
 > We will offer enterprise customers NVIDIA AI cloud services directly and through our network of partners. Examples of these services include NVIDIA DGX Cloud, which is cloud-based infrastructure and software for training AI models, and customizable pretrained AI models. NVIDIA has partnered with leading cloud service providers to host these services in their data centers, and we entered into multi-year cloud service agreements in the second half of fiscal year 2023 to support these offerings and our research and development activities. NVIDIA AI cloud services may not be successful and will …
 
 **New export restrictions and licensing requirements may limit NVIDIA's ability to export certain products to China and Russia.**
 
-*Under: Risks Related to Regulatory, Legal, Our Stock and Other Matters*
+*Under: Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.*
 
 > During the third quarter of fiscal year 2023, the U.S. government, or USG, announced new export restrictions and export licensing requirements targeting China’s semiconductor and supercomputing industries. These restrictions impact exports of certain chips, as well as software, hardware, equipment, and technology used to develop, produce, and manufacture certain chips, to China (including Hong Kong and Macau) and Russia, and specifically impact our A100 and H100 integrated circuits, DGX or any other systems or boards which incorporate A100 or H100 integrated circuits and our A100X. The new …
 
 **Failure to manage new license and regulatory requirements in China may harm the company's results and competitive position.**
 
-*Under: Risks Related to Regulatory, Legal, Our Stock and Other Matters*
+*Under: Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.*
 
 > Management of these new license and other requirements is complicated and time consuming. Our results and competitive position may be harmed if customers in China do not want to purchase our alternative product offerings, if customers purchase product from competitors, if customers develop their own internal solution, if we are unable to provide contractual warranty or other extended service obligations, if the USG does not grant licenses in a timely manner or denies licenses to significant customers, or if we incur significant transition costs. Additionally, if we are unable to sell our …
 
-**Dependence on third-party developers and content providers may impact customer demand.**
+**Integration of acquired systems may be lengthy and costly, causing delays and impacting operations.**
+
+*Under: We may not be able to realize the potential benefits of business investments or acquisitions, and we may not be able to successfully integrate acquisition targets, which could hurt our ability to grow our business, …*
+
+> For example, when integrating acquisition target systems into our own, we have experienced and may continue to experience challenges including lengthy and costly systems integration, delays in purchasing and shipping products, difficulties with system integration via electronic data interchange and other processes with our key suppliers and customers, and training and change management needs of integration personnel. These challenges have impacted our results of operations and may continue to do so in the future.
+
+**Dependence on third-party developers and content providers may affect customer demand.**
 
 *Under: Failure to estimate customer demand properly has led and could lead to mismatches between supply and demand.*
 
 > Additionally, we depend on developers and other third parties to build accelerated computing applications that leverage our platforms. We also rely on third-party content providers and publishers to make their content available on our platforms such as GeForce NOW. Failure by developers to build applications that leverage our platforms, or failure by third-party content providers or publishers to make their content available on reasonable terms or at all for use by our customers or end users on our platforms, could adversely affect customer demand.
-
-**Integration of acquired systems may be lengthy and costly, causing delays and impacting operations.**
-
-*Under: Climate change may have a long-term impact on our business.*
-
-> For example, when integrating acquisition target systems into our own, we have experienced and may continue to experience challenges including lengthy and costly systems integration, delays in purchasing and shipping products, difficulties with system integration via electronic data interchange and other processes with our key suppliers and customers, and training and change management needs of integration personnel. These challenges have impacted our results of operations and may continue to do so in the future.
 
 **Demand predictions may be incorrect due to complex product transitions.**
 
@@ -59,13 +59,13 @@ Matching is by embedding similarity (nomic-embed-text); one-line summaries are w
 
 **Economic sanctions and export restrictions may negatively impact the company's business and financial results.**
 
-*Under: Risks Related to Regulatory, Legal, Our Stock and Other Matters*
+*Under: Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.*
 
 > negatively impacting our business and financial results. Increasing use of economic sanctions may also impact demand for our products or services, negatively impacting our business and financial results. Additional unilateral or multilateral controls are also likely to include deemed export control limitations that negatively impact the ability of our research and development teams to execute our roadmap or other objectives in a timely manner. Additional export restrictions may not only impact our ability to serve overseas markets, but also provoke responses from foreign governments, …
 
 **A defect in a third-party component may have an adverse effect on the company's cost and supply of components and finished goods.**
 
-*Under: Failure to estimate customer demand properly has led and could lead to mismatches between supply and demand.*
+*Under: Defects in our products have caused and could cause us to incur significant expenses to remediate, which can damage our reputation and cause us to lose market share.*
 
 > For example, a defect was identified in a third-party component embedded in certain Data Center products. This defect has had, and other defects may in the future have, an adverse effect on our cost and supply of components and finished goods. These costs could be significant in future periods. We recorded a net warranty liability during fiscal year 2023 primarily in connection with this defect. While we believe we have accurately recorded for warranty obligations, we may need to record additional amounts in the future if our estimate proves to be incorrect. In general, if a product liability …
 
@@ -87,49 +87,49 @@ Matching is by embedding similarity (nomic-embed-text); one-line summaries are w
 
 > We build technology and products for use cases and applications that may be new or may not yet exist. Examples include our Omniverse platform and third-party large language models and generative models. Our demand estimates for these use cases and applications can be incorrect and create volatility in our revenue or supply levels, and we may not be able to generate any revenue from these use cases and applications.
 
-…and 27 more.
+…and 35 more.
 
-## Removed since last year (24)
+## Removed since last year (23)
 
 **Unauthorized access to the company's network by independent criminal threat actors.**
 
-*Under: Climate change may have a long-term impact on our business.*
+*Under: System security and data protection breaches, as well as cyber-attacks, could disrupt our operations, reduce our expected revenue and increase our expenses, which could adversely affect our stock price and damage our …*
 
 > For example, on February 23, 2022, we became aware of a security incident involving unauthorized access to our network by a group of independent criminal threat actors, not affiliated with any government or political cause. The threat actors obtained NVIDIA network credentials and through deception, obtained two-factor authentication capability and access to our network. The threat actors misappropriated certain NVIDIA proprietary information, including NVIDIA source code, and leaked some of that information online. Upon learning of the security incident, we engaged in remedial and …
 
 **The company may be affected by economic boycotts or restrictions on business with Israel.**
 
-*Under: Risks Related to Our Global Operating Business*
+*Under: We are subject to risks and uncertainties associated with international operations, including adverse economic conditions, which may harm our business.*
 
 > We have engineering, sales support operations and manufacturing located in Israel. The State of Israel and companies with business in Israel have been and could in future be the subject of an economic boycott. Other countries have and may continue in the future restrict business with the State of Israel and companies with Israeli operations. Such laws and policies may have adverse effect on our business, financial condition and results of operations.
 
 **Economic downturn and inflation may reduce company margins and have a material adverse effect on financial performance.**
 
-*Under: Risks Related to Our Global Operating Business*
+*Under: We are subject to risks and uncertainties associated with international operations, including adverse economic conditions, which may harm our business.*
 
 > Adverse changes in global, regional or local economic conditions, including recession or slowing growth, changes or uncertainty in fiscal, monetary, or trade policy, higher interest rates, tighter credit, inflation, lower capital expenditures by businesses including on IT infrastructure, increases in unemployment, and lower consumer confidence and spending, periodically occur. More recently, increased inflation may impact supply, employee, facilities and infrastructure costs. To the extent such inflation continues, increases or both, it may reduce our margins and have a material adverse …
 
 **Geopolitical tensions and conflicts may disrupt global supply chains and impact operating strategies, product demand, and profitability.**
 
-*Under: Risks Related to Regulatory, Legal, Our Stock and Other Matters*
+*Under: Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.*
 
 > Geopolitical tensions and conflicts worldwide, including but not limited to Taiwan, China, Hong Kong, Israel and Korea where the manufacture of our product components and final assembly of our products are concentrated, may result in changing regulatory requirements, trade policies, export controls, import duties and economic disruptions that could impact our operating strategies, product demand, access to global markets, hiring, and profitability. The increasing focus on the strategic importance of AI technologies may result in additional regulatory restrictions that target products
 
 **Disruptions to systems and operations can harm the company's financial results, stock price, and reputation.**
 
-*Under: Climate change may have a long-term impact on our business.*
+*Under: System security and data protection breaches, as well as cyber-attacks, could disrupt our operations, reduce our expected revenue and increase our expenses, which could adversely affect our stock price and damage our …*
 
 > loss, loss of data, material disruptions in our systems and operations, supply chain, and ability to produce, sell and distribute our goods and services, and other similar harms. Inability to fulfill orders, delayed sales, lower margins or lost customers as a result of these disruptions could adversely affect our financial results, stock price and reputation.
 
 **The company faces rapid changes in technology and customer requirements in its four large markets.**
 
-*Under: Risks Related to Our Industry and Markets*
+*Under: If we fail to meet the evolving needs of our markets, or to identify new products, services or technologies, our revenue and financial results may be adversely impacted.*
 
 > Our accelerated computing platforms address four large markets: Gaming, Data Center, Professional Visualization, and Automotive. These markets experience rapid changes in technology, customer requirements, new product introductions and enhancements, and industry standards.
 
 **Failure to adapt to changing market needs and technology trends.**
 
-*Under: Risks Related to Our Industry and Markets*
+*Under: If we fail to meet the evolving needs of our markets, or to identify new products, services or technologies, our revenue and financial results may be adversely impacted.*
 
 > We cannot ensure that our strategic direction will result in products and technologies that provide value to our customers and partners. If we fail to anticipate the changing needs of our target markets and emerging technology trends, or if we do not appropriately adapt our strategies as market conditions evolve, our business will be harmed.
 
@@ -141,7 +141,7 @@ Matching is by embedding similarity (nomic-embed-text); one-line summaries are w
 
 **Failure to achieve design wins may prevent the company from obtaining future design wins and generating revenue.**
 
-*Under: Risks Related to Our Industry and Markets*
+*Under: If we fail to meet the evolving needs of our markets, or to identify new products, services or technologies, our revenue and financial results may be adversely impacted.*
 
 > Achieving design wins, which is important to our success in several businesses, may involve a lengthy process and depend on our ability to anticipate features and functionality that customers will demand. Unanticipated changes in industry standards or disruptive technological innovation could render our products incompatible with products developed by other companies. If our products are not in compliance with prevailing industry and safety standards, our customers may not incorporate our products into their design strategies. Failure to obtain a particular design win may prevent us from …
 
@@ -153,19 +153,19 @@ Matching is by embedding similarity (nomic-embed-text); one-line summaries are w
 
 **Deemed export control limitations could negatively impact the ability of our research and development teams to execute our roadmap or other objectives in a timely manner.**
 
-*Under: Risks Related to Regulatory, Legal, Our Stock and Other Matters*
+*Under: Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.*
 
 > and services capable of enabling or facilitating AI, including some or all of our product and service offerings. Such restrictions could limit our ability to serve demand abroad and could negatively impact our business and financial results. Deemed export control limitations could negatively impact the ability of our research and development teams to execute our roadmap or other objectives in a timely manner.
 
 **Investing in new products and services may not generate revenue for several years, or at all.**
 
-*Under: Risks Related to Our Industry and Markets*
+*Under: If we fail to meet the evolving needs of our markets, or to identify new products, services or technologies, our revenue and financial results may be adversely impacted.*
 
 > We make considerable investments in research and development and business offerings in markets where we have a limited operating history, which may not produce meaningful revenue for several years, if at all. If we fail to develop new products, services and technologies, or if they do not become widely adopted, our business, revenue, financial condition and results of operations could be adversely affected.
 
-…and 12 more.
+…and 11 more.
 
-## Rewritten: same topic, new wording (18)
+## Rewritten: same topic, new wording (13)
 
 **Failure to estimate customer demand properly has led and could lead to mismatches between supply and demand.**
 
@@ -173,61 +173,37 @@ Matching is by embedding similarity (nomic-embed-text); one-line summaries are w
 >
 > *This year:* We build finished products and maintain inventory in advance of anticipated demand. While we have in the past entered and may in the future enter into long-term supply and capacity commitments, we may not be able to secure sufficient commitments for capacity to address our business needs or our long-term demand expectations may change. Additionally, our ability to sell certain products has been …
 
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters**
-
-> *Last year:* Concerns relating to the responsible use of new and evolving technologies, such as AI, in our products and services, may result in reputational harm and liability, and may cause us to incur costs to resolve such issues. We are increasingly building AI capabilities into many of our products and services. AI presents risks and challenges that could affect its adoption, and therefore our business. …
->
-> *This year:* Issues relating to the responsible use of our technologies, including AI in our offerings, may result in reputational and financial harm and liability.
-
-**Adverse economic conditions may harm our business.**
-
-> *Last year:* We are subject to risks and uncertainties associated with international operations, including adverse economic conditions, which may harm our business.
->
-> *This year:* International operations are a significant part of our business, and economic, political, business, and other changes in the regions in which we operate may expose us to risks that could harm our business.
-
 **The COVID-19 pandemic has affected and could continue to have a material adverse impact on our financial condition and results of operations.**
 
 > *Last year:* COVID-19 has impacted, and continues to impact, our workforce and operations and those of our customers, partners, vendors and suppliers. As the COVID-19 pandemic continues to evolve, the increased duration and impact of economic and demand uncertainty, and the limited availability of our supply chain and logistical services, may have a material net negative impact on our business and financial …
 >
 > *This year:* The COVID-19 pandemic has impacted and may continue to impact our workforce and operations and those of our customers, partners, vendors and suppliers. COVID-19-related disruptions have created and may continue to create supply chain and logistics constraints, and COVID-19 containment around the world has put restrictions on, among other areas, manufacturing facilities, commerce, and support …
 
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters**
+**We have exposure to additional tax liabilities and our operating results may be adversely impacted by higher than expected tax rates and other tax-related factors.**
 
 > *Last year:* As a multinational corporation, we are subject to income taxes as well as non-income-based taxes, such as payroll, sales, use, value-added, net worth, property and goods and services taxes, in both the United States and various foreign jurisdictions. Our domestic and international tax liabilities are subject to the allocation of revenue and expenses in different jurisdictions. Significant …
 >
 > *This year:* We are subject to complex income tax laws and regulations, as well as non-income-based taxes, in various jurisdictions. Significant judgment is required in determining our worldwide provision for income taxes and other tax liabilities. We are regularly under audit by tax authorities in different jurisdictions. For example, we are currently under examination by the Internal Revenue Service for our …
 
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters**
+**Increased scrutiny from shareholders, regulators and others regarding our environmental, social and governance responsibilities could result in additional costs or risks and adversely impact our reputation and …**
 
 > *Last year:* Shareholder advocacy groups, certain institutional investors, investment funds, other market participants, shareholders and customers have focused increasingly on the ESG and sustainability practices of companies, including those associated with climate change and human rights. These parties have placed increased importance on the implications of the social cost of their investments. If our ESG …
 >
 > *This year:* Shareholder advocacy groups, certain investment funds, other market participants, shareholders and customers have placed increased importance on the implications of the social and environmental cost of their investments and these parties, as well as government regulators, have focused increasingly on corporate ESG and sustainability practices and disclosures, including those associated with …
 
-**Adverse economic conditions may harm our business.**
-
-> *Last year:* System security and data protection breaches, as well as cyber-attacks, could disrupt our operations, reduce our expected revenue and increase our expenses, which could adversely affect our stock price and damage our reputation.
->
-> *This year:* Product, system security, and data breaches and cyber-attacks could disrupt our operations and adversely affect our financial condition, stock price and reputation.
-
-**Failure to estimate customer demand properly has led and could lead to mismatches between supply and demand.**
-
-> *Last year:* If our products contain significant defects, we could incur significant expenses to remediate such defects, our reputation could be damaged, and we could lose market share.
->
-> *This year:* Defects in our products have caused and could cause us to incur significant expenses to remediate, which can damage our reputation and cause us to lose market share.
-
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters**
+**We have exposure to additional tax liabilities and our operating results may be adversely impacted by higher than expected tax rates and other tax-related factors.**
 
 > *Last year:* Our future effective tax rate may also be affected by changes in our business or statutory rates, changes in jurisdictions in which our profits are determined to be earned and taxed, changes in available tax credits, the resolution of issues arising from tax audits, changes in United States generally accepted accounting principles, adjustments to income taxes upon finalization of tax returns, …
 >
 > *This year:* Our future effective tax rate may also be affected by a variety of factors, including changes in our business or statutory rates, the mix of earnings in countries with differing statutory tax rates, available tax incentives, credits and deductions, the expiration of statute of limitations and settlements of tax audits, changes in accounting principles, adjustments to income taxes upon …
 
-**Our accelerated computing platforms experience rapid changes in technology, customer requirements, competitive products, and industry standards.**
+**Failure to meet the evolving needs of our industry and markets may adversely impact our financial results.**
 
 > *Last year:* develop infrastructure needed to scale our business, including related to our acquisitions, customer support, e-commerce and IP licensing capabilities; and
 >
 > *This year:* develop, acquire, and maintain the internal and external infrastructure needed to scale our business, including our acquisitions integrations, customer support, e-commerce, IP licensing capabilities and cloud service capacity; and
 
-**Our accelerated computing platforms experience rapid changes in technology, customer requirements, competitive products, and industry standards.**
+**Failure to meet the evolving needs of our industry and markets may adversely impact our financial results.**
 
 > *Last year:* timely identify emerging industry changes, and develop new or enhance existing products, services and technologies that meet the evolving needs of these markets;
 >
@@ -239,19 +215,43 @@ Matching is by embedding similarity (nomic-embed-text); one-line summaries are w
 >
 > *This year:* We sell most of our products through channel partners, who sell to distributors, retailers, and/or end customers. As a result, the decisions made by our channel partners, distributors, retailers, and in response to changing market conditions and changes in end user demand for our products have impacted and could in the future continue to impact our ability to properly forecast demand, …
 
-## Edited paragraphs (42)
+**Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.**
+
+> *Last year:* Government actions, including trade protection and national security policies of U.S. and foreign government bodies, such as tariffs, import or export regulations, including deemed export restrictions, trade and economic sanctions, decrees, quotas or other trade barriers and restrictions could affect our ability to ship products, provide services to our customers and employees, do business …
+>
+> *This year:* Government actions, including trade protection and national security policies of U.S. and foreign government bodies, such as tariffs, import or export regulations, including deemed export restrictions, trade and economic sanctions, decrees, quotas or other trade barriers and restrictions could affect our ability to ship products, provide services to our customers and employees, do business …
+
+**The COVID-19 pandemic has affected and could continue to have a material adverse impact on our financial condition and results of operations.**
+
+> *Last year:* We have modified our business and workforce practices in response to COVID-19, and we may take further actions as required by government regulations or in the best interests of our employees, customers, partners and suppliers. There is no certainty that our actions will be sufficient to mitigate the risks posed by the disease, and our ability to perform critical functions could be harmed. When we …
+>
+> *This year:* We modified our business and workforce practices in response to COVID-19, including with respect to flexible work and social distancing measures, and we may take further actions as required by government regulations or in the best interests of our employees, customers, partners and suppliers. These and other measures have caused and may in the future cause us to incur incremental expenses and …
+
+**The COVID-19 pandemic has affected and could continue to have a material adverse impact on our financial condition and results of operations.**
+
+> *Last year:* The extent of the impact of the COVID-19 pandemic on our operational and financial performance and our ability to timely execute our business strategies may continue to be difficult to measure and predict. An extended period of global supply chain and economic disruption as a result of the COVID-19 pandemic could have a material negative impact on our business, results of operations, and access …
+>
+> *This year:* The extent of the impact of the COVID-19 pandemic on our operational and financial performance and our ability to timely execute our business strategies may continue to be difficult to measure and predict. The impact of COVID-19 can also exacerbate other risks discussed in these risk factors.
+
+**We are subject to stringent and changing data privacy and security laws, rules, regulations, and other obligations. Privacy or security concerns relating to our products and services could damage our reputation, deter …**
+
+> *Last year:* Certain jurisdictions have enacted data localization laws and cross-border personal data transfer laws. For example, the GDPR generally restricts the transfer of personal data to countries outside of the EEA. The European Commission released a set of “Standard Contractual Clauses” designed for entities to validly transfer personal data out of the EEA to jurisdictions that the European Commission …
+>
+> *This year:* In the ordinary course of business, we may transfer personal data from Europe, China, and other jurisdictions to the United States or other countries. Certain jurisdictions have enacted data localization laws and cross-border personal data transfer laws. For example, the GDPR generally restricts the transfer of personal data to countries outside of the EEA. The European Commission released a set …
+
+## Edited paragraphs (33)
 
 Most changed first. ~~Struck~~ words were removed, **bold** words added; … marks unchanged text.
 
-**International operations are a significant part of our business, which exposes us to us to risks that could harm our business.** (37% of words changed)
+**Product, system security, and data protection breaches, as well as cyber-attacks, could disrupt our operations, reduce our expected revenue and increase our expenses, which could adversely affect our stock price and …** (37% of words changed)
 
 > **We hold confidential and proprietary information, including information from partners and customers.** Breaches of our security measures, along with reported or perceived … or actions, damage to our brand and reputation or other ~~harm~~ **harm, including financial,** to our business. **For example, we hold propriety game source code from third-party partners in our GFN service. Breaches of our GFN security measures, which have happened in the past, could expose our partners to a risk of loss or misuse of this source code, damage both us and our partners, and expose NVIDIA to potential litigation and liability.** If we or a third party we rely on experience a security ~~incident~~ **incident, which has occurred in the past,** or are perceived to have experienced a security incident, we … data, litigation, indemnification obligations, reputational harm, diversion of funds, financial **loss, loss of data, material disruptions in our systems and operations, supply chain, and ability to produce, sell and distribute our goods and services, and other similar harms. Inability to fulfill orders, delayed sales, lower margins or lost customers as a result of these disruptions could adversely affect our financial results, stock price and reputation.**
 
-**The COVID-19 pandemic has affected and could continue to have a material adverse impact on our financial condition and results of operations.** (34% of words changed)
+**Our operating results have in the past fluctuated and may in the future fluctuate, and if our operating results are below the expectations of securities analysts or investors, our stock price could decline.** (34% of words changed)
 
 > **our extended payment term arrangements with certain customers,** the inability of some customers to make required payments, our ability to obtain credit insurance ~~over the purchasing credit~~ **for these customers and their** extended ~~to these customers,~~ **payment terms,** and customer bad debt write-offs;
 
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters** (32% of words changed)
+**Our operations could be affected by the complex laws, rules and regulations to which our business is subject, and political and other actions may adversely impact our business.** (32% of words changed)
 
 > … ownership and infringement; taxes; import and export requirements and tariffs; ~~anti-corruption;~~ **anti-corruption, including the Foreign Corrupt Practices Act;** business acquisitions; foreign exchange controls and cash repatriation restrictions; data … onerous and expensive, could impact our competitive position, and may **negatively** impact our business operations ~~negatively. For example, the Foreign Corrupt Practices Act~~ and ~~other anti-corruption laws~~ **ability to manufacture** and ~~regulations prohibit us from engaging in certain business practices.~~ **ship our products.** There can be no assurance that our employees, contractors, suppliers, **customers** or agents will not violate **applicable laws or the** policies, controls, and procedures that we have designed to help ensure compliance with ~~applicable laws. Violations of these laws~~ **such laws,** and ~~regulations can~~ **violations could** result in ~~fines;~~ **fines,** criminal sanctions against us, our officers, or our ~~employees;~~ **employees,** prohibitions on the conduct of our ~~business;~~ **business,** and damage to our reputation. ~~Should any of these~~ **Changes to the** laws, rules and regulations ~~be amended~~ **to which we are subject,** or ~~expanded, or new ones enacted, we~~ **changes to their interpretation and enforcement** could ~~incur~~ **lead to** materially greater compliance **and other** costs and/or **further** restrictions on our ability to manufacture **and supply** our products and operate our business. For example, we may … changes or increases in anti-competition legislation, regulation, administrative rule making, **increased focus from regulators on cybersecurity vulnerabilities and risks,** and enforcement activity resulting from growing public concern over concentration of economic power in corporations. **Revisions to laws or regulations or their interpretation and enforcement could also result in increased taxation, trade sanctions, the imposition of or increase to import duties or tariffs, restrictions and controls on imports or exports, or other retaliatory actions, which could have an adverse effect on our business plans or impact the timing of our shipments. Additionally, changes in the public perception of governments in the regions where we operate or plan to operate could negatively impact our business and results of operations.**
 
@@ -259,19 +259,15 @@ Most changed first. ~~Struck~~ words were removed, **bold** words added; … mar
 
 > **The use of our** GPUs ~~have use cases in addition to their~~ **for other than that for which they were** designed and ~~marketed~~ **marketed, including new and unexpected** use ~~case, such as~~ **cases, has impacted and can in the future impact demand for our products, including by leading to inconsistent spikes and drops in demand. For example, a number of years ago, our Gaming GPUs began to be used** for digital currency mining, including blockchain-based platforms such as Ethereum. It is difficult for us to estimate with any reasonable degree of ~~precision~~ **precision,** the past or current impact of cryptocurrency mining, or forecast … standards, and changes in the method of verifying blockchain transactions, ~~have~~ **has** impacted and can in the future impact cryptocurrency mining and demand for our ~~products,~~ **products** and can further impact our ability to estimate demand for … cryptocurrency standards and processes including, but not limited to, the ~~pending~~ **recently implemented** Ethereum 2.0 ~~standard~~ **merge** may decrease the usage of GPUs for Ethereum mining as well as create increased aftermarket ~~resales~~ **sales** of our GPUs, **which could negatively** impact retail prices for our ~~GPUs, increase returns of our products in the distribution channel,~~ **GPUs** and ~~may~~ reduce demand for our new GPUs. We ~~have~~ **previously** introduced Lite Hash Rate, or LHR, GeForce GPUs with limited Ethereum mining capability and ~~increased the supply of~~ **provided** CMP **products** in an effort to address demand from gamers and direct miners to CMP. ~~However, if attempts in~~ **With** the ~~aftermarket to improve the hash rate capabilities of our LHR cards are successful, our gaming cards may become more attractive to miners, increasing demand for our gaming GPUs~~ **Ethereum 2.0 merge, NVIDIA Ampere** and ~~limiting our ability to supply our gaming cards to non-mining customers. We cannot predict whether our strategy of using LHR cards and CMP will achieve our desired outcome.~~ **Ada Lovelace architectures no longer include LHR.** In addition, our **new products or previously sold** products may be resold **online or** on the unauthorized “gray market,” which also makes demand forecasting difficult. Gray market products **and reseller marketplaces** compete with our **new products and** distribution channels.
 
-**Failure to estimate customer demand properly has led and could lead to mismatches between supply and demand.** (31% of words changed)
-
-> ~~We depend~~ **Dependency** on ~~third parties~~ **third-party suppliers** and their technology ~~to manufacture, assemble, test, package or design our products, which~~ reduces our control over product quantity and quality, manufacturing yields, development, ~~enhancement~~ **enhancement,** and product delivery ~~schedule~~ **schedules** and could harm our business.
-
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters** (27% of words changed)
+**We are subject to stringent and changing data privacy and security laws, rules, regulations, and other obligations. Privacy or security concerns relating to our products and services could damage our reputation, deter …** (27% of words changed)
 
 > ~~The~~ **In the** United ~~States~~ **States,** federal, state and local ~~governments~~ **authorities** have enacted numerous data privacy and security laws, including for … created a private right of action for certain data breaches. ~~California’s privacy laws will further expand in 2023 under the~~ **The** California Privacy Rights Act of 2020, or CPRA, ~~which may restrict~~ **became operative in 2023, and restricts** the use of certain categories of sensitive personal information; further ~~restrict~~ **restricts** the use of cross-contextual advertising techniques; ~~restrict~~ **restricts** the retention of personal information; ~~expand~~ **expands** the types of data breaches subject to the private right of action; and ~~establish~~ **establishes** the California Privacy Protection Agency ~~to~~ **which can** impose administrative ~~fines. Virginia~~ **fines for noncompliance. Virginia, Colorado, Utah and Connecticut have each** passed ~~the Consumer Data Protection Act, and Colorado passed the Colorado Privacy Act, both of~~ **their own privacy legislation** which differ from the CPRA and **each** become effective in 2023. **Similar laws are being considered in several other states, as well as at the federal and local levels. Additionally, several states and localities have enacted measures related to the use of artificial intelligence and machine learning in products and services.** If we become subject to ~~new~~ **additional** data privacy ~~laws~~ **laws,** the risk of enforcement action against us could ~~increase as we become subject to additional obligations.~~ **increase.**
 
-**Failure to estimate customer demand properly has led and could lead to mismatches between supply and demand.** (26% of words changed)
+**Defects in our products have caused and could cause us to incur significant expenses to remediate, which can damage our reputation and cause us to lose market share.** (26% of words changed)
 
 > Our hardware and software product offerings are complex and **they have in the past and** may **in the future** contain defects or security vulnerabilities, or experience failures or unsatisfactory … markets, technologies and applications or as new versions are released. **These risks further increase when we rely on partners to supply and manufacture components that are used in our products, as these arrangements reduce our direct control over production. Although arrangements with component providers may contain provisions for product defect expense reimbursement, we generally remain responsible to the customer for warranty product defects that may occur from time to time.** Some ~~errors~~ **failures** in our products or services **have been in the past and** may **in the future be** only ~~be~~ discovered after a product or service has been shipped or used. Undiscovered vulnerabilities in our products or services could **result in loss of data or intangible property, or** expose our end customers to unscrupulous third parties who develop … our device has been integrated by OEMs, ODMs, AIBs and ~~Tier~~ **automotive manufacturers and tier** 1 automotive suppliers, and to the user of such end … of related inventory, and divert the attention of our engineering **and management** personnel from our product development efforts to find and correct the issue. **Our efforts to remedy these issues may not be timely or satisfactory to our customers.** An error or defect in new ~~products or releases~~ **products, releases,** or related software drivers after commencement of commercial shipments could result in failure to achieve market acceptance, loss of design wins, **temporary or permanent withdrawal from a product or market,** and harm to our relationships with existing and prospective customers … including for costs to repair or replace products in the ~~field. If a product liability claim is brought against us, the cost of defending the claim could be significant and would divert the efforts of our technical and management personnel and harm our business. Further, our business liability insurance may be inadequate~~ **field** or ~~future coverage may be unavailable on acceptable terms, which could adversely impact our financial results.~~ **in connection with indemnification obligations, or pay fines imposed by regulatory agencies.**
 
-**Risks Related to Regulatory, Legal, Our Stock and Other Matters** (26% of words changed)
+**We are subject to stringent and changing data privacy and security laws, rules, regulations, and other obligations. Privacy or security concerns relating to our products and services could damage our reputation, deter …** (26% of words changed)
 
 > ~~Our products and services may provide us with access to sensitive, confidential or personal data or information that is subject to privacy and security laws, regulations, industry standards, external and internal policies, contracts and other obligations that govern the processing of such data by us and on our behalf. Concerns about our practices or the ultimate use~~ of our products and services with regard to the collection, …
 
@@ -287,8 +283,12 @@ Most changed first. ~~Struck~~ words were removed, **bold** words added; … mar
 
 > … leaders, cost inflation, the COVID-19 pandemic and workforce participation rates. ~~We also must recruit and develop diverse talent.~~ Changes in immigration and work permit regulations or in their administration or interpretation could impair our ability to attract and retain qualified employees. ~~If we are less successful in our recruiting efforts, or if we cannot retain key employees, our business may be adversely affected.~~ Competition for personnel results in increased costs in the form of cash and stock-based ~~compensation. We also must retain~~ **compensation, and in times of stock price volatility, as we have experienced in** the ~~key personnel hired as a result~~ **past and may experience in the future, the retentive value** of our ~~acquisitions, or it could reduce the anticipated benefits of those transactions. We~~ **stock-based compensation may decrease. Additionally, we** are highly dependent on the services of our longstanding executive …
 
-**Issues relating to the responsible use of our technologies, including AI, may result in reputational and financial harm and liability.** (21% of words changed)
+**Business disruptions could harm our operations, lead to a decline in revenue and increase our costs.** (21% of words changed)
 
-> We are subject to stringent and changing data privacy and security **laws, rules, regulations, and other** obligations. Privacy **or security** concerns relating to our products and services could damage our reputation, deter ~~current and potential users from using our products and services,~~ **customers,** or result in legal or regulatory proceedings and liability.
+> … likely harm our business, financial condition and results of operations. ~~For example,~~ **Worldwide geopolitical tensions and conflicts, including but not limited to China, Hong Kong, Israel, Korea and Taiwan where** the ~~invasion by Russia~~ **manufacture** of ~~Ukraine has had~~ **our product components** and ~~will likely continue to have a negative impact on~~ **final assembly of** our ~~employees or operations both within and outside these regions, and~~ **products are concentrated** may result in **changing regulatory requirements, and other disruptions that could impact our operations and operating strategies, product demand, access to global markets, hiring, and profitability. For example, other countries have restricted and may continue in** the ~~loss~~ **future to restrict business with the State** of ~~some or even all of our assets in those regions.~~ **Israel, where we have engineering, sales support operations and manufacturing, and companies with Israeli operations, including by economic boycotts.** Our operations could be harmed and our costs could increase … or economic, business, labor, environmental, public health, or political issues. ~~For example, our operations could be harmed, and our costs could increase, if the conflict between Russia and Ukraine results in a shortage of key materials that our suppliers, including our foundry partners, require to satisfy our needs.~~ The ultimate impact on us, our third-party foundries and other … In the event a disaster, war or catastrophic event affects ~~us or~~ **us,** the third-party systems on which we rely, **or our customers,** our business could be harmed as a result of declines …
 
-…and 30 more.
+**Actions to adequately protect our IP rights could result in substantial costs to us and our ability to compete could be harmed if we are unsuccessful or if we are prohibited from making or selling our products.** (20% of words changed)
+
+> We may commence legal proceedings ~~in order~~ to protect our IP rights, which may increase our operating ~~expenses and negatively impact our operating results.~~ **expenses.** We could be subject to countersuits as a result. If … to seek a license to the third party’s IP rights. ~~However, we may not be able to obtain licenses at all or on terms acceptable to us.~~ If we or one of our indemnitees is unable to obtain such a license, **on acceptable terms or at all,** we could be subject to substantial liabilities or have to … technology. If these arrangements are not concluded on commercially reasonable **terms, our business could be negatively impacted. Furthermore, the indemnification of a customer or other indemnitee may increase our operating expenses and negatively impact our operating results.**
+
+…and 21 more.

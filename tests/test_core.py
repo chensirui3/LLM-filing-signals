@@ -81,7 +81,7 @@ def test_embedding_signals_detect_added_passages():
     extra /= np.linalg.norm(extra, axis=1, keepdims=True)
     assert np.isclose(alignment(base, base[::-1]), 1.0, atol=1e-5)   # reordering is not a change
     assert np.isclose(doc_similarity(base, base[::-1]), 1.0, atol=1e-5)
-    assert alignment(np.vstack([base, extra]), base) < 0.95          # new passages are
+    assert alignment(np.vstack([base, extra]), base) < 0.95          # added passages lower the alignment
 
     f = pd.DataFrame({"ticker": "A", "form": ["10-K", "10-K", "10-Q", "10-K"],
                       "accession": ["k1", "k2", "q1", "k3"],
@@ -127,7 +127,7 @@ def test_memory_controls_separate_date_memory_from_name_preference():
     from fsig.leakage import memory_controls
 
     dates = pd.date_range("2020-01-31", periods=6, freq="ME")
-    # BIG beats SMALL in odd months and loses in even months
+    # BIG outperforms SMALL in alternate months and underperforms in the others.
     fwd = pd.DataFrame({"BIG": [0.1, -0.1] * 3, "SMALL": [0.0] * 6}, index=dates)
     rank = {"BIG": 0, "SMALL": 1}
 
@@ -138,15 +138,16 @@ def test_memory_controls_separate_date_memory_from_name_preference():
                              "guess": guess, "correct": [g == t for g, t in zip(guess, truth)],
                              "pick": picks, "other": ["SMALL" if p == "BIG" else "BIG" for p in picks]})
 
-    # A model that knows each date's outcome: perfect, but wrong-date accuracy is below chance
+    # A model that knows each date's outcome is always correct, but below chance against other dates.
     knows = memory_controls(sample(["BIG", "SMALL"] * 3), fwd, rank, "2023-12-31").loc["pre_cutoff"]
     assert knows["accuracy"] == 1.0 and knows["placebo_accuracy"] < 0.5 and knows["picks_larger"] == 0.5
-    # A model that always picks the big name: 50% right, and the date makes no difference
-    fan = memory_controls(sample(["BIG"] * 6), fwd, rank, "2023-12-31").loc["pre_cutoff"]
-    assert fan["picks_larger"] == 1.0 and fan["accuracy"] == 0.5 and abs(fan["placebo_accuracy"] - 0.5) < 0.11
+    # A model that always picks the larger company is correct half the time, whatever the date.
+    always_larger = memory_controls(sample(["BIG"] * 6), fwd, rank, "2023-12-31").loc["pre_cutoff"]
+    assert always_larger["picks_larger"] == 1.0 and always_larger["accuracy"] == 0.5
+    assert abs(always_larger["placebo_accuracy"] - 0.5) < 0.11
 
 
-def test_variant_gap_ic_detects_scores_nudged_towards_outcomes():
+def test_variant_gap_ic_detects_scores_shifted_towards_outcomes():
     from fsig.robustness import variant_comparison
 
     rng = np.random.default_rng(0)
@@ -210,6 +211,6 @@ def test_headings_come_from_formatting_not_length():
     text = html_to_text(raw)
     with_fmt = paragraphs(text, em)
     assert [p["heading"] for p in with_fmt] == ["Risks Related to Our Global Operating Business", long_heading]
-    # Without formatting the long heading is mistaken for a paragraph and the stale heading sticks.
+    # Without formatting, the long heading is treated as a paragraph and the previous heading is kept.
     without = paragraphs(text)
     assert len(without) == 3 and without[2]["heading"] == "Risks Related to Our Global Operating Business"

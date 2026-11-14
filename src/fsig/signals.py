@@ -14,7 +14,7 @@ from .sections import load_section
 
 _WORD = re.compile(r"[a-z]{2,}")
 
-# Signals the backtest evaluates. Higher value = expected higher return.
+# Signals evaluated by the backtest. A higher value implies a higher expected return.
 SIGNALS = {
     "llm_score": "LLM: mean of tone, outlook, demand, margins (level)",
     "llm_score_chg": "LLM: change in llm_score vs the company's previous filing",
@@ -42,9 +42,9 @@ def cosine(a: Counter, b: Counter) -> float:
 def similarity_signal(filings: pd.DataFrame) -> pd.Series:
     """Cosine similarity of each MD&A with the same form filed about a year earlier.
 
-    This replicates the idea of Cohen, Malloy & Nguyen (2020), "Lazy Prices":
-    companies that change their filing language a lot tend to underperform. It
-    needs no LLM, so it is the bar the LLM signal has to clear.
+    This follows Cohen, Malloy and Nguyen (2020), "Lazy Prices": companies that
+    change their filing language substantially tend to underperform. It
+    requires no LLM and serves as the baseline for the LLM signals.
     """
     out = {}
     for _, grp in tqdm(filings.sort_values("filing_date").groupby(["ticker", "form"]), desc="similarity"):

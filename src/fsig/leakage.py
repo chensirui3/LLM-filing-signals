@@ -1,21 +1,26 @@
-"""Tests for whether the LLM 'predicts' returns by remembering them.
+"""Tests of whether the LLM's apparent predictive power reflects memorised outcomes.
 
-An LLM trained on text up to date C has read the news about what happened to
-each company before C. A backtest that feeds it pre-C filings can therefore
-look profitable for the wrong reason. Three checks:
+An LLM trained on text up to date C has been exposed to news about how each
+company performed before C. A backtest that gives it pre-C filings can
+therefore appear profitable because of memorised outcomes rather than
+information in the text. This module provides three checks:
 
-1. memory probe   - give the model NO filing text, only two company names and
-                    a date, and ask which stock did better over the next three
-                    months. Accuracy above chance before C but not after C is
-                    direct evidence of memorised outcomes. (Asking about one
-                    stock vs the market does not work: the model answers
-                    "underperform" ~95% of the time. A randomly ordered pair
-                    makes any such fixed bias score exactly 50%.)
-2. identity probe - give the model anonymised MD&A text and ask which company
-                    and year it is. If it can tell, anonymisation does not
-                    protect the backtest.
-3. cutoff split   - backtest.split_stats reports performance before and after
-                    C separately. Only the post-cutoff row is clean.
+1. memory probe    - the model receives no filing text, only two company names
+                     and a date, and is asked which stock had the higher return
+                     over the following three months. Accuracy above chance
+                     before C but not after C indicates memorised outcomes.
+                     (A single-stock version of the question, stock versus
+                     market, is uninformative: the model answers "underperform"
+                     about 95% of the time. With a randomly ordered pair, any
+                     such fixed bias scores exactly 50%.)
+2. memory controls - test whether the probe's accuracy depends on the date or
+                     reflects a preference for particular companies.
+3. identity probe  - the model receives anonymised MD&A text and is asked to
+                     name the company and fiscal year. If it can, anonymisation
+                     does not conceal the filer.
+
+The cutoff split (backtest.split_stats) and the comparison of raw and
+anonymised scores (robustness.variant_comparison) complete the set.
 """
 from __future__ import annotations
 
@@ -95,10 +100,10 @@ def month_end_forward_returns(prices: pd.DataFrame, tickers: list[str], horizon:
 
 def memory_sample(prices: pd.DataFrame, names: dict[str, str], llm: dict, benchmark: str,
                   horizon: int = 63, per_period: int = 300, seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Ask the text-free 'which stock did better?' question for random pairs.
+    """Ask the model, with no filing text, which of two randomly paired stocks had the higher return.
 
     names maps ticker -> company name. Pairs and their A/B order are random.
-    Returns (one row per question with the model's guess, month-end forward returns).
+    Returns (one row per question with the model's answer, month-end forward returns).
     """
     rng = np.random.default_rng(seed)
     cutoff = pd.Timestamp(llm["training_cutoff"])
@@ -138,9 +143,21 @@ def _z(acc: float, n: int) -> float:
     return (acc - 0.5) / math.sqrt(0.25 / n) if n else float("nan")  # 50% null
 
 
+PERIODS = ("pre_cutoff", "post_cutoff")
+
+
+def _by_period(sample: pd.DataFrame):
+    """(period, rows) in chronological order, skipping empty periods."""
+    for period in PERIODS:
+        g = sample[sample["period"] == period]
+        if len(g):
+            yield period, g
+
+
 def memory_summary(sample: pd.DataFrame) -> pd.DataFrame:
+    """Accuracy of the model's answers before and after the cutoff, with a z-score against 50%."""
     out = []
-    for period, g in sample.groupby("period"):
+    for period, g in _by_period(sample):
         n, acc = len(g), g["correct"].mean()
         out.append({"period": period, "n": n, "accuracy": acc, "z_vs_50pct": _z(acc, n),
                     "share_guess_A": (g["guess"] == "A").mean()})
@@ -149,33 +166,34 @@ def memory_summary(sample: pd.DataFrame) -> pd.DataFrame:
 
 def memory_probe(prices: pd.DataFrame, names: dict[str, str], llm: dict, benchmark: str,
                  horizon: int = 63, per_period: int = 300, seed: int = 0) -> pd.DataFrame:
-    """Accuracy of text-free guesses, before vs after the cutoff."""
+    """Run the memory probe and return its accuracy before and after the cutoff."""
     return memory_summary(memory_sample(prices, names, llm, benchmark, horizon, per_period, seed)[0])
 
 
 def memory_controls(sample: pd.DataFrame, fwd: pd.DataFrame, size_rank: dict[str, int],
                     cutoff: str) -> pd.DataFrame:
-    """Is the memory probe's accuracy date-specific memory, or a taste for certain names?
+    """Controls that separate date-specific memory from a preference for certain companies.
 
     Above-chance accuracy before the cutoff has two possible sources:
       (a) the model recalls what happened after that particular date, or
-      (b) the model simply prefers some companies (the big, famous ones), and
-          those happened to do well over the sample.
-    Three controls tell them apart, each reported before and after the cutoff:
+      (b) the model prefers some companies (large, well-known ones) that
+          happened to outperform over the sample.
+    The following controls distinguish the two, each reported before and after
+    the cutoff:
 
       picks_larger       how often the model picks the company that is larger
                          today (size_rank: ticker -> rank, 0 = largest)
       larger_wins        accuracy of the rule "always pick the larger company"
-      acc_when_smaller   model accuracy on the questions where it picked the
-                         smaller company, i.e. went against that rule
-      placebo_accuracy   the model's pick scored against what the same pair did
-                         after every OTHER month-end in the same period. If
-                         this is as high as the real accuracy, the model is not
-                         using the date: it just likes the right names.
+      acc_when_smaller   model accuracy on the questions in which it picked the
+                         smaller company, contrary to that rule
+      placebo_accuracy   the model's pick scored against the same pair's
+                         outcome after every other month-end in the same
+                         period. If this is as high as the actual accuracy,
+                         the model is not using the date and source (b) applies.
     """
     c = pd.Timestamp(cutoff)
     rows = []
-    for period, g in sample.groupby("period"):
+    for period, g in _by_period(sample):
         dates = fwd.index[fwd.index <= c] if period == "pre_cutoff" else fwd.index[fwd.index > c]
         larger = np.array([size_rank[p] < size_rank[o] for p, o in zip(g["pick"], g["other"])])
         truth_pick = np.where(g["truth"] == "A", g["a"], g["b"])

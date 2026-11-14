@@ -1,7 +1,7 @@
-"""Checks on whether the headline results depend on choices made along the way.
+"""Sensitivity of the headline results to methodological choices.
 
-sensitivity         long-short Sharpe for other entry lags and cost levels
-variant_comparison  raw vs anonymised LLM scores for the same filing, and
+sensitivity         long-short Sharpe ratio for other entry lags and cost levels
+variant_comparison  raw versus anonymised LLM scores for the same filing, and
                     whether the difference between them predicts returns
 """
 from __future__ import annotations
@@ -21,8 +21,9 @@ def sensitivity(signals: pd.DataFrame, prices: pd.DataFrame, bt: dict,
                 lags: tuple[int, ...] = (0, 1, 2, 5), costs: tuple[int, ...] = (0, 10, 25)) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Full-sample net Sharpe of each long-short portfolio by entry lag and by cost.
 
-    Lag 0 trades at the close of the filing day. Many filings arrive after the
-    close, so lag 0 is not always achievable; it is shown as an upper bound.
+    Lag 0 trades at the close of the filing day. Many filings are released
+    after the close, so lag 0 is not always achievable; it is reported as an
+    upper bound.
     """
     sig_cols = [s for s in SIGNALS if s in signals.columns and signals[s].notna().any()]
     by_lag, by_cost = {}, {}
@@ -44,13 +45,13 @@ def variant_comparison(raw: pd.DataFrame, anon: pd.DataFrame, prices: pd.DataFra
     Returns (agreement, gap_ic).
 
     agreement: correlation between the two scores and the mean of raw - anon
-    either side of the cutoff. If knowing the company changed the model's
-    reading, the scores would diverge.
+    on either side of the cutoff. If knowing the company changed the model's
+    assessment, the scores would diverge.
 
     gap_ic: rank IC of (raw - anon) llm_score against forward returns. This is
-    the direct leakage test: if the model nudged its score towards what it
-    remembers happened next, the gap would predict returns before the cutoff
-    and not after.
+    the direct leakage test: if the model shifted its score towards outcomes
+    it had memorised, the gap would predict returns before the cutoff and not
+    after it.
     """
     c = pd.Timestamp(cutoff)
     m = raw.merge(anon[["accession"] + LLM_SIGNALS], on="accession", suffixes=("", "_anon"))
@@ -74,5 +75,5 @@ def variant_comparison(raw: pd.DataFrame, anon: pd.DataFrame, prices: pd.DataFra
     for name, mask in (("pre_cutoff", pre), ("post_cutoff", ~pre)):
         ic = information_coefficients(events[mask.to_numpy()], ["gap"], bt["horizons"], min_names=4 * bt["quantiles"])
         parts.append(ic.drop(columns="signal").assign(period=name))
-    gap_ic = pd.concat(parts)[["period", "horizon", "mean_ic", "t_stat", "quarters"]]
+    gap_ic = pd.concat(parts, ignore_index=True)[["period", "horizon", "mean_ic", "t_stat", "quarters"]]
     return agreement, gap_ic

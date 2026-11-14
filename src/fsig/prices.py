@@ -12,11 +12,12 @@ def download_prices(tickers: list[str], start: str, benchmark: str) -> pd.DataFr
     import yfinance as yf
 
     symbols = sorted(set(tickers) | {benchmark})
-    # Start a little early so the first filings have a price history.
+    # Start slightly before the sample so the earliest filings have a price history.
     begin = (pd.Timestamp(start) - pd.Timedelta(days=10)).strftime("%Y-%m-%d")
     # threads=False: yfinance's on-disk cache is SQLite and locks under parallel writes.
     raw = yf.download(symbols, start=begin, auto_adjust=True, progress=False, threads=False)
     close = raw["Close"] if isinstance(raw.columns, pd.MultiIndex) else raw[["Close"]].set_axis(symbols, axis=1)
+    # Retry any symbol that came back empty from the batch request.
     for sym in [s for s in symbols if s not in close.columns or close[s].isna().all()]:
         retry = yf.download(sym, start=begin, auto_adjust=True, progress=False, threads=False)
         if not retry.empty:

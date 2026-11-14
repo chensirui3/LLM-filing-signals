@@ -39,10 +39,10 @@ def _walk(raw: bytes) -> list[tuple[str, bool]]:
 
     Line breaks are emitted only at block boundaries. Inline elements are joined
     without a separator because filings often split a single word across
-    <span>s; table cells get a space.
+    <span>s; table cells are followed by a space.
     """
-    # Decode ourselves: without a charset declaration lxml assumes Latin-1 and
-    # mangles curly apostrophes, which breaks the "Management's" header match.
+    # Decode explicitly: without a charset declaration lxml assumes Latin-1 and
+    # corrupts curly apostrophes, which breaks the "Management's" header match.
     try:
         doc = raw.decode("utf-8")
     except UnicodeDecodeError:
@@ -93,8 +93,8 @@ def html_to_text(raw: bytes) -> str:
 def emphasised_lines(raw: bytes, min_share: float = 0.9) -> set[str]:
     """Lines of html_to_text(raw) that are almost entirely bold, italic or underlined.
 
-    Filings mark headings with formatting rather than heading tags, so this is
-    how a heading is told apart from a short paragraph.
+    Filings mark headings with formatting rather than heading tags, so
+    formatting is used to distinguish a heading from a short paragraph.
     """
     parts = _walk(raw)
     text = "".join(t for t, _ in parts).replace("\r", "\n").translate(_C1)
@@ -150,7 +150,7 @@ _PATTERNS = {
 # that points to pages. The section then runs from an MD&A heading to the first
 # heading that normally follows it.
 _MDNA_TITLE_START = [_title(_MDNA)]
-# Banks often skip the MD&A heading too and open with one of these.
+# Banks often omit the MD&A heading as well and open with one of these.
 _MDNA_ALT_START = [_title(r"executive\s+(?:overview|summary)\s*$"), _title(r"financial\s+review\s*$")]
 _INCOME_STMT = _title(r"(?:condensed\s+)?consolidated\s+(?:condensed\s+)?statements?\s+of\s+(?:income|operations|earnings)")
 _MDNA_TITLE_END = {
@@ -169,8 +169,8 @@ _MDNA_TITLE_END = {
         _INCOME_STMT,
     ],
 }
-# A fallback span that swallows another item's header started in the table of
-# contents, not in the body.
+# A fallback span that contains another item's header began in the table of
+# contents rather than in the body, so it is rejected.
 _OTHER_ITEM = re.compile(r"^item\s*(?:1a?|2|3|5|8|9a?)\b[\s\.\:\-–—]*[a-z]", re.I | re.M)
 
 MIN_SECTION_CHARS = 2000
@@ -182,12 +182,12 @@ def find_section(text: str, starts: list[re.Pattern], ends: list[re.Pattern],
     """Longest span from a start header to the next end header.
 
     Each header appears at least twice (table of contents and body). The table
-    of contents span is a few lines; the real section is the longest. Spans
-    containing a `reject` match are skipped.
+    of contents span is a few lines long; the section itself is the longest.
+    Spans containing a `reject` match are skipped.
 
     bridge > 0 handles filings that repeat the section title as a running page
     header: if another start header follows an end header within `bridge`
-    characters, the section has not really ended, so the span continues.
+    characters, the section has not ended, so the span continues.
     """
     end_pos = sorted(m.start() for p in ends for m in p.finditer(text))
     start_matches = sorted((m.start(), m.end()) for p in starts for m in p.finditer(text))
@@ -270,9 +270,9 @@ def _process(args: tuple[int, str, str]) -> tuple[str, bool]:
 def parse_all(filings: pd.DataFrame, workers: int = 6, retry_failed: bool = False) -> pd.DataFrame:
     """Parse every downloaded filing not yet parsed. Returns coverage per form.
 
-    retry_failed also re-parses filings where no MD&A was found, which is what
-    you want after improving the parser. Filings that parsed are never touched,
-    so their cached LLM scores and embeddings stay valid.
+    retry_failed also re-parses filings in which no MD&A was found, which is
+    needed after a change to the parser. Filings that parsed successfully are
+    left untouched, so their cached LLM scores and embeddings remain valid.
     """
     SECTIONS.mkdir(parents=True, exist_ok=True)
 

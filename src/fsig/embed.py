@@ -1,22 +1,23 @@
-"""Embedding-based year-over-year similarity: Lazy Prices with a modern text model.
+"""Embedding-based year-over-year similarity: the Lazy Prices comparison with a text-embedding model.
 
-The word-count baseline (signals.similarity_signal) only sees which words are
-used. Two paragraphs that say the same thing in different words look different
-to it, and a paragraph that reuses the same vocabulary to say something new
-looks unchanged. Embeddings compare meaning instead.
+The word-count baseline (signals.similarity_signal) measures only which words
+are used. Two paragraphs with the same meaning but different wording appear
+different to it, and a paragraph that reuses the same vocabulary to make a new
+point appears unchanged. Embeddings compare meaning instead.
 
-Each MD&A is cut into ~1,500-character chunks and every chunk is embedded with
-a local model through Ollama. Two signals compare a filing with the same form
-filed about a year earlier:
+Each MD&A is split into chunks of about 1,500 characters and every chunk is
+embedded with a local model through Ollama. Two signals compare a filing with
+the same form filed about a year earlier:
 
   emb_sim_yoy    cosine similarity of the two documents' mean chunk vectors
-                 (one number for "is the overall content the same?")
-  emb_align_yoy  for each chunk, the best-matching chunk in the other filing;
-                 averaged in both directions. Low values mean passages were
-                 added or removed, even if the document's overall topic mix is
-                 unchanged.
+                 (a single measure of overall content similarity)
+  emb_align_yoy  for each chunk, the best-matching chunk in the other filing,
+                 averaged in both directions. Low values indicate that
+                 passages were added or removed, even if the document's
+                 overall topic mix is unchanged.
 
-Higher = less change = expected higher return, same sign as sim_yoy.
+A higher value means less change and a higher expected return, the same sign
+convention as sim_yoy.
 """
 from __future__ import annotations
 
@@ -66,7 +67,7 @@ def embed_all(filings: pd.DataFrame, emb: dict, section: str = "mdna") -> dict:
         path = emb_path(emb["model"], accession, section)
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp.npy")
-        np.save(tmp, vecs.astype(np.float16))  # half precision: plenty for cosine, half the disk
+        np.save(tmp, vecs.astype(np.float16))  # half precision is sufficient for cosine similarity and halves disk use
         tmp.replace(path)
         return True
 
@@ -79,8 +80,9 @@ def embed_all(filings: pd.DataFrame, emb: dict, section: str = "mdna") -> dict:
 def prior_year_map(filings: pd.DataFrame, has) -> dict[str, str]:
     """accession -> accession of the same form filed 320-410 days earlier (closest to 365).
 
-    `has(accession)` says whether a filing is usable. Same matching rule as the
-    word-count baseline so the two signals are compared on equal terms.
+    `has(accession)` reports whether a filing is usable. The matching rule is
+    the same as for the word-count baseline, so the two signals are compared on
+    equal terms.
     """
     out = {}
     for _, grp in filings.sort_values("filing_date").groupby(["ticker", "form"]):

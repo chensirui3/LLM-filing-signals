@@ -3,8 +3,8 @@
 - Filings: 4466, with LLM score: 4349, companies: 100
 - Sample: 2015-01-09 to 2026-11-12
 - Model training cutoff: 2023-12-31
-- Primary signal (declared in config before results): `llm_score_chg`
-- Entry lag: 1 trading day(s); cost: 10 bps one-way; quantiles: 5
+- Primary signal (declared in the configuration before any results were computed): `llm_score_chg`
+- Entry lag: 1 trading day; one-way cost: 10 bps; quantiles: 5
 
 ## Signals
 
@@ -17,7 +17,7 @@
 
 ## Rank IC against market-adjusted forward returns
 
-Spearman correlation computed within each calendar quarter, then averaged. |t| above about 2 is conventionally significant.
+Spearman correlation between the signal and the return, computed within each calendar quarter and then averaged across quarters. A |t| above about 2 is conventionally treated as significant.
 
 | signal | horizon | mean_ic | t_stat | quarters |
 |---|---|---|---|---|
@@ -47,7 +47,7 @@ Spearman correlation computed within each calendar quarter, then averaged. |t| a
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
 | full | 142 | 0.024 | 0.112 | 0.215 | 0.738 | 0.549 | -0.261 |
-| pre_cutoff | 107 | -0.000 | 0.107 | -0.004 | -0.013 | 0.551 | -0.261 |
+| pre_cutoff | 107 | 0.000 | 0.107 | -0.004 | -0.013 | 0.551 | -0.261 |
 | post_cutoff | 35 | 0.099 | 0.127 | 0.779 | 1.330 | 0.543 | -0.101 |
 
 Average monthly turnover: 0.87 (2.0 = both legs fully replaced).
@@ -106,23 +106,23 @@ Average monthly turnover: 0.80 (2.0 = both legs fully replaced).
 
 ## Leakage: memory probe (no filing text given)
 
-The model sees only two company names and a date and guesses which stock did better over the next three months. Accuracy above 50% before the cutoff but not after it means the model knows something about outcomes.
+The model is given two company names and a date, with no filing text, and asked which stock had the higher return over the following three months. Accuracy above 50% before the cutoff but not after it indicates that the model has memorised outcomes.
 
 | period | n | accuracy | z_vs_50pct | share_guess_A |
 |---|---|---|---|---|
-| post_cutoff | 300 | 0.473 | -0.924 | 0.183 |
 | pre_cutoff | 300 | 0.593 | 3.233 | 0.167 |
+| post_cutoff | 300 | 0.473 | -0.924 | 0.183 |
 
-Controls: is that date-specific memory, or a preference for certain names? `picks_larger` is how often the model chose the company that is larger today; `larger_wins` is the accuracy of always choosing the larger one; `acc_when_smaller` is the model's accuracy when it chose the smaller one; `placebo_accuracy` scores the model's pick against the same pair's outcome at every other month-end in the period, so it shows how much accuracy survives when the date is wrong.
+The controls below separate date-specific memory from a general preference for certain companies. `picks_larger` is the share of questions in which the model chose the company that is larger today; `larger_wins` is the accuracy of always choosing the larger company; `acc_when_smaller` is the model's accuracy when it chose the smaller company; `placebo_accuracy` scores the model's choice against the same pair's outcome at every other month-end in the period, and so shows how much accuracy remains when the date is wrong.
 
 | period | picks_larger | larger_wins | n_picked_smaller | acc_when_smaller | z_when_smaller | placebo_accuracy |
 |---|---|---|---|---|---|---|
-| post_cutoff | 0.493 | 0.553 | 152 | 0.421 | -1.947 | 0.491 |
 | pre_cutoff | 0.510 | 0.530 | 147 | 0.565 | 1.567 | 0.506 |
+| post_cutoff | 0.493 | 0.553 | 152 | 0.421 | -1.947 | 0.491 |
 
 ## Leakage: identity probe on anonymised text (n=290)
 
-Share of anonymised MD&A excerpts where the model named the right company / year.
+Share of anonymised MD&A excerpts for which the model named the correct company and fiscal year.
 
 | metric | share |
 |---|---|
@@ -130,9 +130,30 @@ Share of anonymised MD&A excerpts where the model named the right company / year
 | year_correct | 0.224 |
 | year_within_1 | 0.448 |
 
+## Leakage: raw versus anonymised scores
+
+Each filing was scored twice: as filed, and with the company name, ticker and years masked. `gap` is the mean of the raw score minus the anonymised score (`llm_score` ranges from -2 to 2).
+
+| signal | n | correlation | gap_pre | t_pre | gap_post | t_post |
+|---|---|---|---|---|---|---|
+| llm_score | 4349 | 0.944 | -0.009 | -2.490 | 0.000 | 0.029 |
+| llm_score_chg | 4249 | 0.858 | 0.000 | -0.074 | 0.005 | 0.618 |
+| llm_caution | 4349 | 0.890 | 0.001 | 0.234 | 0.001 | 0.117 |
+
+Rank IC of the gap in `llm_score` against market-adjusted forward returns. If the model had shifted its scores towards outcomes it had memorised, the IC would be positive before the cutoff and close to zero after it.
+
+| period | horizon | mean_ic | t_stat | quarters |
+|---|---|---|---|---|
+| pre_cutoff | 5 | -0.027 | -1.822 | 36 |
+| pre_cutoff | 21 | -0.032 | -1.582 | 36 |
+| pre_cutoff | 63 | -0.018 | -1.178 | 36 |
+| post_cutoff | 5 | 0.012 | 0.402 | 12 |
+| post_cutoff | 21 | 0.037 | 1.274 | 11 |
+| post_cutoff | 63 | 0.033 | 1.065 | 11 |
+
 ## Robustness: entry lag and trading cost
 
-Full-sample net Sharpe ratio of each long-short portfolio. Lag 0 trades at the close of the filing day, which is not achievable for filings released after the close; it is an upper bound.
+Full-sample net Sharpe ratio of each long-short portfolio. Lag 0 trades at the close of the filing day, which is not achievable for filings released after the close, so it is an upper bound.
 
 By entry lag (trading days after the filing date, 10 bps cost):
 
@@ -155,24 +176,3 @@ By one-way cost (entry lag 1):
 | sim_yoy | -0.293 | -0.355 | -0.449 |
 | emb_sim_yoy | -0.509 | -0.576 | -0.676 |
 | emb_align_yoy | -0.005 | -0.088 | -0.212 |
-
-## Leakage: raw versus anonymised scores
-
-The same filings scored twice: as filed, and with company name, ticker and years masked. `gap` is the mean of raw minus anonymised (scores run from -2 to 2).
-
-| signal | n | correlation | gap_pre | t_pre | gap_post | t_post |
-|---|---|---|---|---|---|---|
-| llm_score | 4349 | 0.944 | -0.009 | -2.490 | 0.000 | 0.029 |
-| llm_score_chg | 4249 | 0.858 | -0.000 | -0.074 | 0.005 | 0.618 |
-| llm_caution | 4349 | 0.890 | 0.001 | 0.234 | 0.001 | 0.117 |
-
-Rank IC of the gap in `llm_score` against forward returns. If the model moved its score towards outcomes it remembers, this would be positive before the cutoff and zero after.
-
-| index | period | horizon | mean_ic | t_stat | quarters |
-|---|---|---|---|---|---|
-| 0 | pre_cutoff | 5 | -0.027 | -1.822 | 36 |
-| 1 | pre_cutoff | 21 | -0.032 | -1.582 | 36 |
-| 2 | pre_cutoff | 63 | -0.018 | -1.178 | 36 |
-| 0 | post_cutoff | 5 | 0.012 | 0.402 | 12 |
-| 1 | post_cutoff | 21 | 0.037 | 1.274 | 11 |
-| 2 | post_cutoff | 63 | 0.033 | 1.065 | 11 |

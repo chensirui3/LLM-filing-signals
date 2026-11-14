@@ -1,19 +1,20 @@
-"""What changed in a company's Risk Factors since last year's 10-K?
+"""Year-over-year comparison of the Risk Factors section of a company's 10-K.
 
-Risk Factors run to 50-200 thousand characters and are mostly copied forward
-from the previous year, so the informative part is the small share that is
-new, dropped or reworded. A plain text diff finds edits but breaks down when a
-paragraph is moved or rewritten. This tool matches paragraphs by meaning first
-(embeddings), then classifies each match by how much of the wording survived:
+A Risk Factors section runs to 50-200 thousand characters and is largely
+carried forward from the previous year, so the informative part is the small
+share that is new, removed or reworded. A plain text diff finds edits but
+fails when a paragraph is moved or rewritten. This tool first matches
+paragraphs by meaning (embeddings), then classifies each match by how much of
+the wording is retained:
 
     unchanged   same words (word-level similarity >= 0.98)
     edited      same paragraph with changes (>= 0.60); shown as a word diff
     rewritten   different wording, same content (embedding cosine >= 0.93)
-    added       no counterpart in last year's filing
-    removed     in last year's filing, no counterpart this year
+    added       no counterpart in the previous filing
+    removed     present in the previous filing, no counterpart in the current one
 
-A local LLM then writes a one-line plain-English summary of each added and
-removed risk. Everything is computed from the two filings alone.
+A local LLM then writes a one-line summary of each added and removed risk.
+All output is derived from the two filings alone.
 """
 from __future__ import annotations
 
@@ -31,10 +32,10 @@ from .extract import ollama_chat
 from .edgar import filing_path
 from .sections import emphasised_lines, load_section
 
-MIN_PARA_CHARS = 150   # shorter lines are headings, bullets from the summary, page furniture
-# TOPIC was set by reading matched pairs: with nomic-embed-text, two unrelated
-# risk paragraphs from the same company already score about 0.72, pairs between
-# 0.80 and 0.92 share a theme but say different things, and genuine rewrites of
+MIN_PARA_CHARS = 150   # shorter lines are headings, summary bullets, or page headers and footers
+# TOPIC was chosen by inspecting matched pairs. With nomic-embed-text, two
+# unrelated risk paragraphs from the same company score about 0.72, pairs
+# between 0.80 and 0.92 share a theme but differ in content, and rewrites of
 # the same paragraph start at about 0.93.
 SAME, EDITED, TOPIC = 0.98, 0.60, 0.93
 _NOT_HEADING = re.compile(r"(?:[;,:]|\band|\bor)$")
@@ -49,7 +50,7 @@ SUMMARY_SYSTEM = (
 SUMMARY_SCHEMA = {"type": "object", "properties": {"summary": {"type": "string"}}, "required": ["summary"]}
 
 
-MAX_HEADING_CHARS = 800  # some filers (Boeing) write a whole bold paragraph as the heading
+MAX_HEADING_CHARS = 800  # some filers (Boeing, for example) use a full bold paragraph as the heading
 
 
 def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
@@ -57,14 +58,15 @@ def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
 
     `emphasised` is the set of lines the filing prints in bold, italic or
     underline (sections.emphasised_lines). Risk-factor headings are often full
-    sentences of 150-400 characters, so length cannot tell them from body text;
-    formatting can. Without it, any short capitalised line counts as a heading.
+    sentences of 150-400 characters, so length does not distinguish them from
+    body text, whereas formatting does. If no formatting is supplied, any short
+    capitalised line is treated as a heading.
     """
     lines = [(ln.strip(), _BULLET.sub("", ln).strip()) for ln in text.split("\n")]
     emphasised = emphasised or set()
     marked = [raw in emphasised and len(ln) <= MAX_HEADING_CHARS for raw, ln in lines]
-    # Trust the formatting only if it picks out a plausible share of lines:
-    # none means it was not detected, most means the whole section is bold.
+    # Use the formatting only if it marks a plausible share of lines: none means
+    # it was not detected, and more than half means the whole section is bold.
     use_format = 0 < sum(marked) <= 0.5 * len(lines)
 
     out, heading = [], ""
@@ -78,7 +80,7 @@ def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
         elif len(ln) >= MIN_PARA_CHARS:
             out.append({"heading": heading, "text": ln})
         elif not use_format and ln[0].isupper() and not _NOT_HEADING.search(ln):
-            heading = ln  # list items (lower-case start, or ending in ';' / 'and') are not headings
+            heading = ln  # list items (lower-case start, or ending in ';' or 'and') are excluded
     return out
 
 
@@ -151,7 +153,7 @@ def _summaries(llm: dict, texts: list[str]) -> list[str]:
 
 
 def pick_filings(filings: pd.DataFrame, ticker: str, year: int | None) -> tuple:
-    """(previous 10-K, chosen 10-K) rows. year is the filing year; default latest."""
+    """(previous 10-K, selected 10-K) rows. year is the filing year; the default is the latest."""
     k = filings[(filings["ticker"] == ticker.upper()) & (filings["form"] == "10-K")].sort_values("filing_date")
     if k.empty:
         raise SystemExit(f"{ticker} has no 10-K in the filing index (it may not be in the universe).")
@@ -184,7 +186,7 @@ def risk_diff(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, l
     rows, removed = classify(old, new, _embed(emb, old), _embed(emb, new))
 
     by = {s: [r for r in rows if r["status"] == s] for s in ("unchanged", "edited", "rewritten", "added")}
-    # Most novel first, favouring full paragraphs over one-line list items.
+    # Least similar to the other filing first, with full paragraphs ranked above one-line list items.
     by["added"].sort(key=lambda r: -(1 - r["cos"]) * min(len(new[r["new"]]), 600))
     removed.sort(key=lambda r: -(1 - r["cos"]) * min(len(old[r["old"]]), 600))
     by["edited"].sort(key=lambda r: r["ratio"])
@@ -194,18 +196,20 @@ def risk_diff(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, l
 
     chars = lambda rs, src, key: sum(len(src[r[key]]) for r in rs)
     total = sum(map(len, new)) or 1
-    out = [f"# {cur['name']} ({cur.ticker}): what changed in Risk Factors",
+    out = [f"# {cur['name']} ({cur.ticker}): changes in Risk Factors",
            "",
-           f"10-K filed {cur.filing_date:%Y-%m-%d} compared with the 10-K filed {prev.filing_date:%Y-%m-%d}.",
-           f"Paragraphs: {len(old)} last year, {len(new)} this year.",
+           f"10-K filed {cur.filing_date:%Y-%m-%d} compared with the 10-K filed {prev.filing_date:%Y-%m-%d}. "
+           f"Paragraphs compared: {len(old)} in the previous filing, {len(new)} in the current filing.",
            "",
-           "| | paragraphs | share of this year's text |",
+           "| Status | Paragraphs | Share of current text |",
            "|---|---|---|"]
     for s in ("unchanged", "edited", "rewritten", "added"):
         out.append(f"| {s} | {len(by[s])} | {chars(by[s], new, 'new') / total:.0%} |")
-    out += [f"| removed (from last year) | {len(removed)} | |", "",
-            "Matching is by embedding similarity (" + emb["model"] + "); one-line summaries are written by "
-            + (llm["model"] if llm else "no model") + " and can be wrong. Read the quoted text.", ""]
+    note = f"Paragraphs are matched by embedding similarity ({emb['model']})."
+    if llm:
+        note += (f" The one-line summaries are generated by {llm['model']} and may be inaccurate; "
+                 "the quoted filing text is authoritative.")
+    out += [f"| removed (from the previous filing) | {len(removed)} | |", "", note, ""]
 
     def block(title: str, items: list[dict], src: list[str], meta: list[dict], key: str, summaries: list[str], total_n: int):
         out.extend([f"## {title} ({total_n})", ""])
@@ -220,18 +224,21 @@ def risk_diff(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, l
         if total_n > len(items):
             out.extend([f"…and {total_n - len(items)} more.", ""])
 
-    block("New this year", added, new, new_p, "new", notes[: len(added)], len(by["added"]))
-    block("Removed since last year", gone, old, old_p, "old", notes[len(added):], len(removed))
+    block("Added", added, new, new_p, "new", notes[: len(added)], len(by["added"]))
+    block("Removed", gone, old, old_p, "old", notes[len(added):], len(removed))
 
-    out += [f"## Rewritten: same topic, new wording ({len(by['rewritten'])})", ""]
+    out += [f"## Rewritten: same content, new wording ({len(by['rewritten'])})", ""]
     for r in sorted(by["rewritten"], key=lambda r: r["ratio"])[:max_items]:
         out += [f"**{new_p[r['new']]['heading'] or '(no heading)'}**", "",
-                "> *Last year:* " + _excerpt(old[r["old"]], 400), ">", "> *This year:* " + _excerpt(new[r["new"]], 400), ""]
+                "> *Previous:* " + _excerpt(old[r["old"]], 400), ">", "> *Current:* " + _excerpt(new[r["new"]], 400), ""]
     if not by["rewritten"]:
         out += ["None.", ""]
+    elif len(by["rewritten"]) > max_items:
+        out += [f"…and {len(by['rewritten']) - max_items} more.", ""]
 
     out += [f"## Edited paragraphs ({len(by['edited'])})", "",
-            "Most changed first. ~~Struck~~ words were removed, **bold** words added; … marks unchanged text.", ""]
+            "Ordered from most to least changed. ~~Struck~~ words were removed and **bold** words were "
+            "added; … marks omitted unchanged text.", ""]
     for r in by["edited"][:max_items]:
         out += [f"**{new_p[r['new']]['heading'] or '(no heading)'}** ({1 - r['ratio']:.0%} of words changed)", "",
                 "> " + inline_diff(old[r["old"]], new[r["new"]]), ""]

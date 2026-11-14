@@ -1,4 +1,4 @@
-"""Write reports/report.md with tables and charts for every signal."""
+"""Write reports/report_<variant>.md with tables and a chart for every signal."""
 from __future__ import annotations
 
 import json
@@ -21,11 +21,19 @@ def _md(df: pd.DataFrame, floats: str = "{:.3f}") -> str:
         if isinstance(v, float):
             if pd.isna(v):
                 return ""
-            return str(int(v)) if v.is_integer() and abs(v) >= 1 else floats.format(v)
+            if v.is_integer() and abs(v) >= 1:
+                return str(int(v))
+            s = floats.format(v)
+            return s.lstrip("-") if float(s) == 0 else s  # print 0.000, not -0.000
         return str(v)
     lines = ["| " + " | ".join(map(str, df.columns)) + " |", "|" + "---|" * len(df.columns)]
     lines += ["| " + " | ".join(fmt(v) for v in row) + " |" for row in df.itertuples(index=False)]
     return "\n".join(lines)
+
+
+# Sections produced by the leakage and robustness steps, in the order they
+# appear after the backtest results.
+SECTION_ORDER = ("memory", "identity", "variants", "sensitivity")
 
 
 def _sections_path():
@@ -38,9 +46,10 @@ def load_sections() -> dict[str, dict]:
 
 
 def save_section(key: str, title: str, body: str) -> None:
-    """Keep a section produced by a slow step (probes, robustness) so that every
-    later report rebuild includes it. Keys starting with 'all:' go into every
-    report; '<variant>:' keys only into that variant's report."""
+    """Store a section produced by a slow step (probes, robustness) so that every
+    later report rebuild includes it. The key is '<scope>:<name>', where name is
+    one of SECTION_ORDER and scope is 'all' (included in every report) or a
+    variant (included only in that variant's report)."""
     REPORTS.mkdir(exist_ok=True)
     s = load_sections()
     s[key] = {"title": title, "body": body}
@@ -59,15 +68,17 @@ def make_report(signals: pd.DataFrame, prices: pd.DataFrame, cfg: dict, variant:
             f"companies: {events['ticker'].nunique()}",
             f"- Sample: {events['filing_date'].min():%Y-%m-%d} to {events['filing_date'].max():%Y-%m-%d}",
             f"- Model training cutoff: {llm['training_cutoff']}",
-            f"- Primary signal (declared in config before results): `{bt['primary_signal']}`",
-            f"- Entry lag: {bt['entry_lag_days']} trading day(s); cost: {bt['cost_bps']} bps one-way; "
-            f"quantiles: {bt['quantiles']}", ""]
+            f"- Primary signal (declared in the configuration before any results were computed): "
+            f"`{bt['primary_signal']}`",
+            f"- Entry lag: {bt['entry_lag_days']} trading day{'' if bt['entry_lag_days'] == 1 else 's'}; "
+            f"one-way cost: {bt['cost_bps']} bps; quantiles: {bt['quantiles']}", ""]
 
     out += ["## Signals", ""] + [f"- `{k}`: {v}" for k, v in SIGNALS.items() if k in sig_cols] + [""]
 
     out += ["## Rank IC against market-adjusted forward returns", "",
-            "Spearman correlation computed within each calendar quarter, then averaged. "
-            "|t| above about 2 is conventionally significant.", ""]
+            "Spearman correlation between the signal and the return, computed within each "
+            "calendar quarter and then averaged across quarters. A |t| above about 2 is "
+            "conventionally treated as significant.", ""]
     ic = information_coefficients(events, sig_cols, bt["horizons"], min_names=min_names)
     out += [_md(ic), ""]
 
@@ -78,7 +89,7 @@ def make_report(signals: pd.DataFrame, prices: pd.DataFrame, cfg: dict, variant:
         monthly = long_short(events, prices, sig, bt)
         out += [f"### `{sig}`", ""]
         if monthly.empty:
-            out += ["Not enough names to form portfolios.", ""]
+            out += ["Too few companies to form portfolios.", ""]
             continue
         stats = split_stats(monthly, llm["training_cutoff"])
         out += [_md(stats.rename_axis("period")), "",
@@ -96,9 +107,11 @@ def make_report(signals: pd.DataFrame, prices: pd.DataFrame, cfg: dict, variant:
     plt.close(fig)
     out += [f"![Long-short cumulative returns](long_short_{variant}.png)", ""]
 
-    for key, sec in load_sections().items():
-        if key.split(":")[0] in ("all", variant):
-            out += [f"## {sec['title']}", "", sec["body"], ""]
+    saved = load_sections()
+    for name in SECTION_ORDER:
+        for key in (f"all:{name}", f"{variant}:{name}"):
+            if key in saved:
+                out += [f"## {saved[key]['title']}", "", saved[key]["body"], ""]
 
     path = REPORTS / f"report_{variant}.md"
     path.write_text("\n".join(out), encoding="utf-8")

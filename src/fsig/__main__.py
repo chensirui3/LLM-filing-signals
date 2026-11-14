@@ -82,20 +82,22 @@ def main() -> None:
         ident_summary = ident.drop(columns="accession").mean().to_frame("share").rename_axis("metric")
         report.save_section(
             "all:memory", "Leakage: memory probe (no filing text given)",
-            "The model sees only two company names and a date and guesses which stock did "
-            "better over the next three months. Accuracy above 50% before the cutoff but not "
-            "after it means the model knows something about outcomes.\n\n" + report._md(mem)
-            + "\n\nControls: is that date-specific memory, or a preference for certain names? "
-            "`picks_larger` is how often the model chose the company that is larger today; "
-            "`larger_wins` is the accuracy of always choosing the larger one; `acc_when_smaller` "
-            "is the model's accuracy when it chose the smaller one; `placebo_accuracy` scores "
-            "the model's pick against the same pair's outcome at every other month-end in the "
-            "period, so it shows how much accuracy survives when the date is wrong.\n\n"
+            "The model is given two company names and a date, with no filing text, and asked "
+            "which stock had the higher return over the following three months. Accuracy above "
+            "50% before the cutoff but not after it indicates that the model has memorised "
+            "outcomes.\n\n" + report._md(mem)
+            + "\n\nThe controls below separate date-specific memory from a general preference "
+            "for certain companies. `picks_larger` is the share of questions in which the model "
+            "chose the company that is larger today; `larger_wins` is the accuracy of always "
+            "choosing the larger company; `acc_when_smaller` is the model's accuracy when it "
+            "chose the smaller company; `placebo_accuracy` scores the model's choice against "
+            "the same pair's outcome at every other month-end in the period, and so shows how "
+            "much accuracy remains when the date is wrong.\n\n"
             + report._md(ctrl.drop(columns=["n", "accuracy"])))
         report.save_section(
             "all:identity", f"Leakage: identity probe on anonymised text (n={len(ident)})",
-            "Share of anonymised MD&A excerpts where the model named the right company / year.\n\n"
-            + report._md(ident_summary))
+            "Share of anonymised MD&A excerpts for which the model named the correct company "
+            "and fiscal year.\n\n" + report._md(ident_summary))
         print(mem.to_string(), "\n", ctrl.T.to_string(), "\n", ident_summary.to_string())
         print("wrote", report.make_report(sig, px, cfg, args.variant))
     if args.step == "riskdiff":
@@ -110,8 +112,8 @@ def main() -> None:
         report.save_section(
             f"{args.variant}:sensitivity", "Robustness: entry lag and trading cost",
             "Full-sample net Sharpe ratio of each long-short portfolio. Lag 0 trades at the close "
-            "of the filing day, which is not achievable for filings released after the close; it "
-            "is an upper bound.\n\nBy entry lag (trading days after the filing date, "
+            "of the filing day, which is not achievable for filings released after the close, so "
+            "it is an upper bound.\n\nBy entry lag (trading days after the filing date, "
             f"{bt['cost_bps']} bps cost):\n\n" + report._md(by_lag)
             + f"\n\nBy one-way cost (entry lag {bt['entry_lag_days']}):\n\n" + report._md(by_cost))
         print(by_lag.to_string(), "\n", by_cost.to_string())
@@ -121,12 +123,14 @@ def main() -> None:
                 signals.load_signals("raw"), signals.load_signals("anon"), px, bt, llm["training_cutoff"])
             report.save_section(
                 "all:variants", "Leakage: raw versus anonymised scores",
-                "The same filings scored twice: as filed, and with company name, ticker and years "
-                "masked. `gap` is the mean of raw minus anonymised (scores run from -2 to 2).\n\n"
+                "Each filing was scored twice: as filed, and with the company name, ticker and "
+                "years masked. `gap` is the mean of the raw score minus the anonymised score "
+                "(`llm_score` ranges from -2 to 2).\n\n"
                 + report._md(agree)
-                + "\n\nRank IC of the gap in `llm_score` against forward returns. If the model "
-                "moved its score towards outcomes it remembers, this would be positive before the "
-                "cutoff and zero after.\n\n" + report._md(gap_ic))
+                + "\n\nRank IC of the gap in `llm_score` against market-adjusted forward returns. "
+                "If the model had shifted its scores towards outcomes it had memorised, the IC "
+                "would be positive before the cutoff and close to zero after it.\n\n"
+                + report._md(gap_ic))
             print(agree.to_string(), "\n", gap_ic.to_string())
             variants = ["raw", "anon"]
         for v in variants:

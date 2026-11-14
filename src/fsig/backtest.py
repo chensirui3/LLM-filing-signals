@@ -4,8 +4,8 @@ Timing rule, used everywhere:
     d0    = first trading day on or after the filing date
     entry = close of d0 + entry_lag_days
 A signal is never used before its entry date, and returns are measured from the
-entry close. With the default lag of 1 the strategy gives the market a full
-day to react before it trades, which is deliberately conservative.
+entry close. With the default lag of 1 the market has a full trading day to
+react before the strategy trades, which is a deliberately conservative choice.
 """
 from __future__ import annotations
 
@@ -123,8 +123,8 @@ def perf_stats(r: pd.Series) -> dict:
 def split_stats(monthly: pd.DataFrame, cutoff: str, col: str = "net") -> pd.DataFrame:
     """Performance for the full sample and either side of the model's training cutoff.
 
-    Months after the cutoff are the only ones where the LLM cannot have seen
-    what happened next, so that row is the one to trust.
+    Months after the cutoff are the only ones in which the LLM cannot have seen
+    subsequent events, so only that row is free of possible look-ahead.
     """
     c = pd.Timestamp(cutoff)
     parts = {"full": monthly, "pre_cutoff": monthly[monthly.index <= c], "post_cutoff": monthly[monthly.index > c]}

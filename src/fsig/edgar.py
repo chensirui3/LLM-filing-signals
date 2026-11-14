@@ -1,7 +1,7 @@
 """SEC EDGAR access: universe, filing index and raw filing downloads.
 
-Everything is cached on disk, so every step can be re-run and resumes where it
-stopped.
+All responses are cached on disk, so each step can be re-run and resumes where
+it stopped.
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ _COLS = ("accessionNumber", "filingDate", "reportDate", "form", "primaryDocument
 
 
 class EdgarClient:
-    """Throttled, retrying HTTP client. The SEC allows 10 requests/second; we use 5."""
+    """Throttled, retrying HTTP client. The SEC allows 10 requests per second; this client uses 5."""
 
     def __init__(self, min_interval: float = 0.2):
         self.session = requests.Session()
@@ -57,10 +57,10 @@ class EdgarClient:
             if r.status_code == 403:
                 raise RuntimeError(
                     f"SEC returned 403 for {url}. Check EDGAR_USER_AGENT in .env, "
-                    "or wait 10 minutes if you were rate-limited."
+                    "or wait about 10 minutes if the client has been rate-limited."
                 )
             r.raise_for_status()
-        raise RuntimeError(f"Giving up on {url}")
+        raise RuntimeError(f"Request failed after 5 attempts: {url}")
 
     def get_json(self, url: str, cache: Path | None = None, refresh: bool = False):
         if cache and cache.exists() and not refresh:
@@ -79,9 +79,10 @@ def _frame(block: dict) -> pd.DataFrame:
 def filings_for_cik(client: EdgarClient, cik: int, start_date: str, forms: list[str]) -> pd.DataFrame:
     """All filings of the given forms since start_date for one company.
 
-    The submissions API returns only the latest ~1000 filings in the main file.
-    Heavy filers (banks) burn through that in weeks, so older pages are fetched
-    too, using each page's date range to skip the ones we don't need.
+    The submissions API returns only the most recent 1,000 or so filings in the
+    main file. Frequent filers such as banks exceed that within weeks, so older
+    pages are fetched as well; each page's date range is used to skip pages
+    that end before start_date.
     """
     sub = RAW / "submissions"
     main = client.get_json(
@@ -109,9 +110,9 @@ def filings_for_cik(client: EdgarClient, cik: int, start_date: str, forms: list[
 def build_universe(client: EdgarClient, size: int, start_date: str, forms: list[str]):
     """Pick the first `size` companies in SEC's ticker file that file 10-Ks.
 
-    The SEC file is ordered by current market capitalisation. NOTE: choosing
-    the universe by *today's* size is a look-ahead/survivorship bias. It is
-    listed in the README limitations and should be stated in any write-up.
+    The SEC file is ordered by current market capitalisation. Selecting the
+    universe by current size introduces look-ahead and survivorship bias; see
+    the Limitations section of the README.
     """
     raw = client.get_json(TICKERS_URL, RAW / "company_tickers.json")
     candidates = pd.DataFrame(list(raw.values())).drop_duplicates("cik_str")
@@ -124,10 +125,10 @@ def build_universe(client: EdgarClient, size: int, start_date: str, forms: list[
         cik = int(row.cik_str)
         try:
             f = filings_for_cik(client, cik, start_date, forms)
-        except Exception as e:  # a single bad company must not kill the run
+        except Exception as e:  # one failing company should not abort the run
             tqdm.write(f"skip {row.ticker}: {e}")
             continue
-        if (f["form"] == "10-K").sum() == 0:  # foreign filers (20-F), funds, etc.
+        if (f["form"] == "10-K").sum() == 0:  # foreign filers (20-F), funds and similar
             continue
         f = f.assign(ticker=row.ticker, name=row.title)
         members.append({"cik": cik, "ticker": row.ticker, "name": row.title})

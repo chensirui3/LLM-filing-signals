@@ -1,8 +1,9 @@
 """Structured signal extraction from MD&A text with a local Ollama model.
 
 Every model response is cached in SQLite, keyed by a hash of
-(model, prompt version, variant, text), so runs are resumable and a prompt
-change never silently mixes with old results.
+(model, prompt version, variant, text), so runs are resumable and results from
+different prompt versions are never mixed. PROMPT_VERSION must be incremented
+whenever SYSTEM or SCHEMA changes.
 """
 from __future__ import annotations
 
@@ -102,10 +103,10 @@ def company_core_name(name: str) -> str:
 def anonymise(text: str, name: str, ticker: str, fiscal_year: int) -> str:
     """Mask the company name, ticker and calendar years.
 
-    Years become offsets from the fiscal year ('Y+0', 'Y-1') so period-over-period
-    comparisons still read correctly but the model can't tell which year it is.
-    Product and brand names are NOT masked; the identification probe in
-    leakage.py measures how much that matters.
+    Years become offsets from the fiscal year ('Y+0', 'Y-1'), so period-over-period
+    comparisons still read correctly but the calendar year is not stated.
+    Product and brand names are not masked; the identity probe in leakage.py
+    measures how much identifying information remains.
     """
     core = company_core_name(name)
     if len(core) >= 3:

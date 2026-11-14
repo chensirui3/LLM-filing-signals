@@ -129,22 +129,65 @@ def test_memory_controls_separate_date_memory_from_name_preference():
     dates = pd.date_range("2020-01-31", periods=6, freq="ME")
     # BIG outperforms SMALL in alternate months and underperforms in the others.
     fwd = pd.DataFrame({"BIG": [0.1, -0.1] * 3, "SMALL": [0.0] * 6}, index=dates)
+    window_end = pd.Series(dates + pd.Timedelta(days=90), index=dates)
     rank = {"BIG": 0, "SMALL": 1}
 
-    def sample(picks):
-        truth = ["A" if fwd.loc[d, "BIG"] > 0 else "B" for d in dates]
-        guess = ["A" if p == "BIG" else "B" for p in picks]
-        return pd.DataFrame({"period": "pre_cutoff", "date": dates, "a": "BIG", "b": "SMALL", "truth": truth,
-                             "guess": guess, "correct": [g == t for g, t in zip(guess, truth)],
-                             "pick": picks, "other": ["SMALL" if p == "BIG" else "BIG" for p in picks]})
+    def answers(picks):
+        winner = ["BIG" if fwd.loc[d, "BIG"] > 0 else "SMALL" for d in dates]
+        return pd.DataFrame({"period": "pre_cutoff", "date": dates, "x": "BIG", "y": "SMALL", "winner": winner,
+                             "consistent": True, "pick": picks,
+                             "other": ["SMALL" if p == "BIG" else "BIG" for p in picks]})
 
     # A model that knows each date's outcome is always correct, but below chance against other dates.
-    knows = memory_controls(sample(["BIG", "SMALL"] * 3), fwd, rank, "2023-12-31").loc["pre_cutoff"]
+    knows = memory_controls(answers(["BIG", "SMALL"] * 3), fwd, window_end, rank, "2023-12-31").loc["pre_cutoff"]
     assert knows["accuracy"] == 1.0 and knows["placebo_accuracy"] < 0.5 and knows["picks_larger"] == 0.5
     # A model that always picks the larger company is correct half the time, whatever the date.
-    always_larger = memory_controls(sample(["BIG"] * 6), fwd, rank, "2023-12-31").loc["pre_cutoff"]
+    always_larger = memory_controls(answers(["BIG"] * 6), fwd, window_end, rank, "2023-12-31").loc["pre_cutoff"]
     assert always_larger["picks_larger"] == 1.0 and always_larger["accuracy"] == 0.5
     assert abs(always_larger["placebo_accuracy"] - 0.5) < 0.11
+
+
+def test_memory_probe_scores_only_order_independent_answers(monkeypatch):
+    from fsig import leakage
+
+    days = pd.bdate_range("2021-01-01", periods=260)
+    px = pd.DataFrame({"UP": np.linspace(100, 200, 260), "DOWN": np.linspace(100, 60, 260), "SPY": 100.0}, index=days)
+    pairs, fwd, window_end = leakage.memory_pairs(px, ["UP", "DOWN"], 63, per_year=20)
+    assert set(pairs["winner"]) == {"UP"} and (pairs["x"] == "DOWN").all()      # x and y are alphabetical
+    assert (pairs["window_end"] > pairs["date"]).all() and pairs["id"].is_unique
+
+    def fake(model):
+        def run(kind, rows, llm, system, schema=None, schemas=None):
+            out = {}
+            for rid, user in rows:
+                first, second = schemas[rid]["properties"]["answer"]["enum"]
+                out[rid] = {"answer": {"knows": "UP", "second": second, "wrong": "DOWN"}[model]}
+            return out
+        return run
+
+    names = {"UP": "Up Corp", "DOWN": "Down Corp"}
+    for model, consistent, score in (("knows", 1.0, 1.0), ("second", 0.0, 0.5), ("wrong", 1.0, 0.0)):
+        monkeypatch.setattr(leakage, "_run_probe", fake(model))
+        a = leakage.memory_answers(pairs, names, {"model": model})
+        assert a["consistent"].mean() == consistent and a["score"].mean() == score
+    # A model that always names the second-listed stock contributes no scored answers.
+    assert leakage.memory_summary(leakage.with_periods(a.assign(consistent=False), "2030-01-01")).loc["pre_cutoff", "n"] == 0
+
+    labelled = leakage.with_periods(pairs, str(pairs["date"].sort_values().iloc[len(pairs) // 2].date()))
+    assert set(labelled["period"]) == {"pre_cutoff", "spans_cutoff", "post_cutoff"}
+
+
+def test_tied_scores_are_split_evenly_across_quantile_boundaries():
+    from fsig.backtest import quantile_weights
+
+    s = pd.Series([1.0] * 4 + [0.0] * 6, index=list("abcdefghij"))
+    w = quantile_weights(s, 5)                      # two long slots shared by four names, two short by six
+    assert np.allclose(w[:4], 0.25) and np.allclose(w[4:], -1 / 6)
+    assert np.isclose(w[w > 0].sum(), 1) and np.isclose(w[w < 0].sum(), -1)
+    shuffled = s.sample(frac=1, random_state=1)     # the result does not depend on the order of the names
+    assert np.allclose(quantile_weights(shuffled, 5).reindex(s.index), w)
+    assert np.allclose(quantile_weights(pd.Series(np.arange(10.0)), 5), [-.5, -.5, 0, 0, 0, 0, 0, 0, .5, .5])
+    assert np.allclose(quantile_weights(pd.Series([3.0] * 10), 5), 0)   # no information, no position
 
 
 def test_variant_gap_ic_detects_scores_shifted_towards_outcomes():

@@ -7,7 +7,9 @@ forms: ["10-K", "10-Q"]
 
 llm:
   model: "llama3.1:8b"
-  host: "http://localhost:11434"
+  # 127.0.0.1 rather than localhost: on Windows, localhost can add about two
+  # seconds to every request while the client first tries IPv6.
+  host: "http://127.0.0.1:11434"
   training_cutoff: "2023-12-31"   # Meta's documented cutoff for Llama 3.1
   chunk_chars: 12000              # about 3,000 tokens of MD&A per call
   max_chunks: 3                   # first N chunks of each MD&A
@@ -23,9 +25,20 @@ backtest:
   benchmark: "SPY"
   primary_signal: "llm_score_chg"   # fixed before any results were computed
 
+leakage:
+  memory_pairs_per_year: 400   # random stock pairs per calendar year, each asked in both orders
+  memory_horizon: 63           # trading days over which the two returns are compared
+  identity_sample: 300         # filings drawn for the identity probe
+  # Models given the memory probe, with the end of their training data as
+  # documented in Meta's model cards. Models that are not installed are skipped.
+  memory_models:
+    "llama2:7b": "2022-09-30"      # pretraining data; some tuning data runs to July 2023
+    "llama3:8b": "2023-03-31"
+    "llama3.1:8b": "2023-12-31"
+
 embed:
   model: "nomic-embed-text"
-  host: "http://localhost:11434"
+  host: "http://127.0.0.1:11434"
   prefix: "clustering: "      # nomic models expect a task prefix; this one is intended for symmetric similarity
   chunk_chars: 1500
   batch: 32

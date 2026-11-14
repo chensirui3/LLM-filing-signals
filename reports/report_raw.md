@@ -5,6 +5,7 @@
 - Model training cutoff: 2023-12-31
 - Primary signal (declared in the configuration before any results were computed): `llm_score_chg`
 - Entry lag: 1 trading day; one-way cost: 10 bps; quantiles: 5
+- Share of each MD&A read by the LLM (first 3 chunks of 12,000 characters), median: 47% for 10-K, 67% for 10-Q
 
 ## Signals
 
@@ -17,48 +18,75 @@
 
 ## Rank IC against market-adjusted forward returns
 
-Spearman correlation between the signal and the return, computed within each calendar quarter and then averaged across quarters. A |t| above about 2 is conventionally treated as significant.
+Spearman correlation between the signal and the return, computed within each calendar quarter and then averaged across quarters. A |t| above about 2 is conventionally treated as significant. `se` is the standard error of the mean IC and `min_detectable_ic` (2.8 standard errors) is the smallest true IC this sample would detect with 80% power at the 5% level; a null result rules out larger effects, not smaller ones.
 
-| signal | horizon | mean_ic | t_stat | quarters |
+| signal | horizon | mean_ic | t_stat | quarters | se | min_detectable_ic |
+|---|---|---|---|---|---|---|
+| llm_score | 5 | -0.012 | -0.628 | 48 | 0.018 | 0.052 |
+| llm_score | 21 | -0.014 | -0.669 | 47 | 0.021 | 0.058 |
+| llm_score | 63 | 0.016 | 0.768 | 47 | 0.021 | 0.059 |
+| llm_score_chg | 5 | -0.001 | -0.085 | 47 | 0.016 | 0.043 |
+| llm_score_chg | 21 | -0.011 | -0.580 | 46 | 0.018 | 0.051 |
+| llm_score_chg | 63 | 0.010 | 0.605 | 46 | 0.017 | 0.046 |
+| llm_caution | 5 | -0.009 | -0.526 | 48 | 0.017 | 0.048 |
+| llm_caution | 21 | -0.004 | -0.297 | 47 | 0.014 | 0.039 |
+| llm_caution | 63 | -0.014 | -1.041 | 47 | 0.013 | 0.037 |
+| sim_yoy | 5 | -0.006 | -0.361 | 44 | 0.018 | 0.049 |
+| sim_yoy | 21 | -0.004 | -0.193 | 43 | 0.020 | 0.056 |
+| sim_yoy | 63 | -0.003 | -0.132 | 43 | 0.025 | 0.069 |
+| emb_sim_yoy | 5 | -0.009 | -0.499 | 44 | 0.017 | 0.049 |
+| emb_sim_yoy | 21 | -0.026 | -1.167 | 43 | 0.022 | 0.062 |
+| emb_sim_yoy | 63 | -0.031 | -1.337 | 43 | 0.023 | 0.065 |
+| emb_align_yoy | 5 | -0.012 | -0.689 | 44 | 0.017 | 0.048 |
+| emb_align_yoy | 21 | -0.001 | -0.070 | 43 | 0.018 | 0.051 |
+| emb_align_yoy | 63 | 0.006 | 0.322 | 43 | 0.019 | 0.054 |
+
+## Timing: returns before, around and after the filing
+
+Rank IC of each signal against the market-adjusted return in three windows, shown as IC (t-statistic). `before_filing` is the 63 trading days that end the day before the filing; `filing_window` runs from the close before the filing to the entry close; `after_entry` is the 63 trading days after entry, the only window the strategy can earn. A signal that reflects information the market already has correlates with the first two windows and not the third.
+
+| signal | period | before_filing | filing_window | after_entry |
 |---|---|---|---|---|
-| llm_score | 5 | -0.012 | -0.628 | 48 |
-| llm_score | 21 | -0.014 | -0.669 | 47 |
-| llm_score | 63 | 0.016 | 0.768 | 47 |
-| llm_score_chg | 5 | -0.001 | -0.085 | 47 |
-| llm_score_chg | 21 | -0.011 | -0.580 | 46 |
-| llm_score_chg | 63 | 0.010 | 0.605 | 46 |
-| llm_caution | 5 | -0.009 | -0.526 | 48 |
-| llm_caution | 21 | -0.004 | -0.297 | 47 |
-| llm_caution | 63 | -0.014 | -1.041 | 47 |
-| sim_yoy | 5 | -0.006 | -0.361 | 44 |
-| sim_yoy | 21 | -0.004 | -0.193 | 43 |
-| sim_yoy | 63 | -0.003 | -0.132 | 43 |
-| emb_sim_yoy | 5 | -0.009 | -0.499 | 44 |
-| emb_sim_yoy | 21 | -0.026 | -1.167 | 43 |
-| emb_sim_yoy | 63 | -0.031 | -1.337 | 43 |
-| emb_align_yoy | 5 | -0.012 | -0.689 | 44 |
-| emb_align_yoy | 21 | -0.001 | -0.070 | 43 |
-| emb_align_yoy | 63 | 0.006 | 0.322 | 43 |
+| llm_score | full | 0.089 (4.2) | 0.047 (2.8) | 0.016 (0.8) |
+| llm_score | pre_cutoff | 0.093 (3.4) | 0.070 (4.1) | 0.007 (0.3) |
+| llm_score | post_cutoff | 0.080 (2.8) | -0.022 (-0.6) | 0.045 (1.1) |
+| llm_score_chg | full | 0.056 (3.1) | 0.058 (3.9) | 0.010 (0.6) |
+| llm_score_chg | pre_cutoff | 0.073 (3.5) | 0.073 (4.1) | 0.016 (0.8) |
+| llm_score_chg | post_cutoff | 0.008 (0.2) | 0.013 (0.5) | -0.009 (-0.3) |
+| llm_caution | full | 0.023 (1.5) | 0.025 (1.9) | -0.014 (-1.0) |
+| llm_caution | pre_cutoff | 0.027 (1.4) | 0.044 (3.3) | -0.013 (-0.9) |
+| llm_caution | post_cutoff | 0.009 (0.3) | -0.034 (-1.3) | -0.017 (-0.6) |
+| sim_yoy | full | -0.003 (-0.1) | -0.006 (-0.4) | -0.003 (-0.1) |
+| sim_yoy | pre_cutoff | -0.016 (-0.8) | -0.012 (-0.6) | -0.026 (-1.0) |
+| sim_yoy | post_cutoff | 0.033 (1.1) | 0.009 (0.3) | 0.063 (1.1) |
+| emb_sim_yoy | full | -0.011 (-0.6) | -0.003 (-0.2) | -0.031 (-1.3) |
+| emb_sim_yoy | pre_cutoff | -0.032 (-1.6) | -0.002 (-0.1) | -0.056 (-2.2) |
+| emb_sim_yoy | post_cutoff | 0.045 (1.1) | -0.005 (-0.2) | 0.042 (0.9) |
+| emb_align_yoy | full | 0.030 (1.9) | 0.012 (0.6) | 0.006 (0.3) |
+| emb_align_yoy | pre_cutoff | 0.032 (1.7) | 0.000 (0.0) | -0.009 (-0.4) |
+| emb_align_yoy | post_cutoff | 0.023 (0.7) | 0.042 (1.4) | 0.049 (1.3) |
 
 ## Long-short portfolios (monthly, net of costs)
+
+Top-minus-bottom quantile portfolios. Companies with equal scores are split evenly across a quantile boundary.
 
 ### `llm_score`
 
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
-| full | 142 | 0.024 | 0.112 | 0.215 | 0.738 | 0.549 | -0.261 |
-| pre_cutoff | 107 | 0.000 | 0.107 | -0.004 | -0.013 | 0.551 | -0.261 |
-| post_cutoff | 35 | 0.099 | 0.127 | 0.779 | 1.330 | 0.543 | -0.101 |
+| full | 142 | 0.025 | 0.114 | 0.224 | 0.769 | 0.535 | -0.264 |
+| pre_cutoff | 107 | -0.001 | 0.106 | -0.008 | -0.024 | 0.523 | -0.264 |
+| post_cutoff | 35 | 0.106 | 0.134 | 0.789 | 1.347 | 0.571 | -0.105 |
 
-Average monthly turnover: 0.87 (2.0 = both legs fully replaced).
+Average monthly turnover: 0.86 (2.0 = both legs fully replaced).
 
 ### `llm_score_chg`
 
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
-| full | 139 | -0.022 | 0.096 | -0.226 | -0.770 | 0.489 | -0.415 |
-| pre_cutoff | 104 | -0.046 | 0.092 | -0.501 | -1.476 | 0.490 | -0.415 |
-| post_cutoff | 35 | 0.051 | 0.105 | 0.489 | 0.834 | 0.486 | -0.183 |
+| full | 139 | -0.019 | 0.095 | -0.204 | -0.695 | 0.489 | -0.402 |
+| pre_cutoff | 104 | -0.041 | 0.090 | -0.453 | -1.333 | 0.490 | -0.402 |
+| post_cutoff | 35 | 0.044 | 0.108 | 0.412 | 0.704 | 0.486 | -0.210 |
 
 Average monthly turnover: 1.47 (2.0 = both legs fully replaced).
 
@@ -66,9 +94,9 @@ Average monthly turnover: 1.47 (2.0 = both legs fully replaced).
 
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
-| full | 142 | -0.026 | 0.102 | -0.259 | -0.890 | 0.472 | -0.422 |
-| pre_cutoff | 107 | -0.030 | 0.093 | -0.321 | -0.958 | 0.467 | -0.299 |
-| post_cutoff | 35 | -0.016 | 0.127 | -0.123 | -0.210 | 0.486 | -0.173 |
+| full | 142 | -0.015 | 0.075 | -0.196 | -0.675 | 0.465 | -0.295 |
+| pre_cutoff | 107 | -0.010 | 0.070 | -0.142 | -0.425 | 0.467 | -0.174 |
+| post_cutoff | 35 | -0.029 | 0.089 | -0.327 | -0.558 | 0.457 | -0.164 |
 
 Average monthly turnover: 0.76 (2.0 = both legs fully replaced).
 
@@ -76,9 +104,9 @@ Average monthly turnover: 0.76 (2.0 = both legs fully replaced).
 
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
-| full | 130 | -0.052 | 0.146 | -0.355 | -1.170 | 0.492 | -0.598 |
-| pre_cutoff | 95 | -0.047 | 0.107 | -0.437 | -1.228 | 0.484 | -0.436 |
-| post_cutoff | 35 | -0.066 | 0.222 | -0.297 | -0.506 | 0.514 | -0.464 |
+| full | 130 | -0.048 | 0.146 | -0.329 | -1.082 | 0.492 | -0.585 |
+| pre_cutoff | 95 | -0.043 | 0.107 | -0.403 | -1.133 | 0.484 | -0.419 |
+| post_cutoff | 35 | -0.062 | 0.222 | -0.278 | -0.474 | 0.514 | -0.465 |
 
 Average monthly turnover: 0.77 (2.0 = both legs fully replaced).
 
@@ -86,9 +114,9 @@ Average monthly turnover: 0.77 (2.0 = both legs fully replaced).
 
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
-| full | 130 | -0.080 | 0.138 | -0.576 | -1.896 | 0.454 | -0.671 |
-| pre_cutoff | 95 | -0.065 | 0.114 | -0.575 | -1.619 | 0.432 | -0.516 |
-| post_cutoff | 35 | -0.118 | 0.191 | -0.618 | -1.056 | 0.514 | -0.452 |
+| full | 130 | -0.075 | 0.137 | -0.546 | -1.796 | 0.431 | -0.657 |
+| pre_cutoff | 95 | -0.063 | 0.114 | -0.559 | -1.573 | 0.400 | -0.507 |
+| post_cutoff | 35 | -0.105 | 0.188 | -0.559 | -0.955 | 0.514 | -0.434 |
 
 Average monthly turnover: 0.78 (2.0 = both legs fully replaced).
 
@@ -96,29 +124,58 @@ Average monthly turnover: 0.78 (2.0 = both legs fully replaced).
 
 | period | months | ann_return | ann_vol | sharpe | t_stat | hit_rate | max_drawdown |
 |---|---|---|---|---|---|---|---|
-| full | 130 | -0.010 | 0.115 | -0.088 | -0.290 | 0.523 | -0.356 |
-| pre_cutoff | 95 | -0.007 | 0.092 | -0.077 | -0.218 | 0.516 | -0.195 |
-| post_cutoff | 35 | -0.018 | 0.163 | -0.112 | -0.191 | 0.543 | -0.356 |
+| full | 130 | -0.008 | 0.114 | -0.069 | -0.229 | 0.531 | -0.375 |
+| pre_cutoff | 95 | 0.001 | 0.091 | 0.008 | 0.024 | 0.526 | -0.166 |
+| post_cutoff | 35 | -0.032 | 0.164 | -0.193 | -0.329 | 0.543 | -0.375 |
 
-Average monthly turnover: 0.80 (2.0 = both legs fully replaced).
+Average monthly turnover: 0.79 (2.0 = both legs fully replaced).
 
 ![Long-short cumulative returns](long_short_raw.png)
 
 ## Leakage: memory probe (no filing text given)
 
-The model is given two company names and a date, with no filing text, and asked which stock had the higher return over the following three months. Accuracy above 50% before the cutoff but not after it indicates that the model has memorised outcomes.
+Each model is given two company names and a date, with no filing text, and asked which stock had the higher return over the following three months. The same 4,775 pairs, an equal number from every calendar year, are put to every model in both orders. `order_independent` is the share of pairs on which the model named the same company both times; `accuracy` is measured on those pairs (`n`), so a preference for one position cannot affect it. `accuracy_all_pairs` counts a pair with conflicting answers as half right. A pair is pre-cutoff when its whole three-month window ends before the model's training cutoff and post-cutoff when the question date is after it.
 
-| period | n | accuracy | z_vs_50pct | share_guess_A |
-|---|---|---|---|---|
-| pre_cutoff | 300 | 0.593 | 3.233 | 0.167 |
-| post_cutoff | 300 | 0.473 | -0.924 | 0.183 |
+| model | cutoff | period | pairs | order_independent | n | accuracy | z_vs_50pct | accuracy_all_pairs |
+|---|---|---|---|---|---|---|---|---|
+| llama2:7b | 2022-09-30 | pre_cutoff | 2985 | 0.678 | 2025 | 0.520 | 1.800 | 0.514 |
+| llama2:7b | 2022-09-30 | post_cutoff | 1683 | 0.638 | 1073 | 0.477 | -1.496 | 0.485 |
+| llama3:8b | 2023-03-31 | pre_cutoff | 3152 | 0.681 | 2146 | 0.569 | 6.433 | 0.547 |
+| llama3:8b | 2023-03-31 | post_cutoff | 1480 | 0.724 | 1071 | 0.528 | 1.803 | 0.520 |
+| llama3.1:8b | 2023-12-31 | pre_cutoff | 3498 | 0.591 | 2067 | 0.572 | 6.577 | 0.543 |
+| llama3.1:8b | 2023-12-31 | post_cutoff | 1192 | 0.561 | 669 | 0.550 | 2.590 | 0.528 |
 
-The controls below separate date-specific memory from a general preference for certain companies. `picks_larger` is the share of questions in which the model chose the company that is larger today; `larger_wins` is the accuracy of always choosing the larger company; `acc_when_smaller` is the model's accuracy when it chose the smaller company; `placebo_accuracy` scores the model's choice against the same pair's outcome at every other month-end in the period, and so shows how much accuracy remains when the date is wrong.
+Memorised outcomes would show as accuracy above 50% before a model's cutoff that falls to 50% after it, with the fall occurring at a different date for each model.
 
-| period | picks_larger | larger_wins | n_picked_smaller | acc_when_smaller | z_when_smaller | placebo_accuracy |
-|---|---|---|---|---|---|---|
-| pre_cutoff | 0.510 | 0.530 | 147 | 0.565 | 1.567 | 0.506 |
-| post_cutoff | 0.493 | 0.553 | 152 | 0.421 | -1.947 | 0.491 |
+![Memory probe accuracy by year](memory_probe.png)
+
+Accuracy on order-independent answers by year of the question, with the number of such answers in brackets:
+
+| year | llama2:7b | llama3:8b | llama3.1:8b |
+|---|---|---|---|
+| 2015 | 0.493 (278) | 0.616 (268) | 0.565 (230) |
+| 2016 | 0.562 (276) | 0.636 (247) | 0.568 (243) |
+| 2017 | 0.578 (258) | 0.580 (274) | 0.633 (248) |
+| 2018 | 0.480 (273) | 0.563 (247) | 0.535 (245) |
+| 2019 | 0.515 (274) | 0.599 (277) | 0.624 (218) |
+| 2020 | 0.581 (267) | 0.615 (288) | 0.641 (237) |
+| 2021 | 0.494 (265) | 0.537 (294) | 0.553 (226) |
+| 2022 | 0.441 (270) | 0.422 (270) | 0.442 (233) |
+| 2023 | 0.502 (223) | 0.576 (290) | 0.588 (238) |
+| 2024 | 0.408 (265) | 0.530 (296) | 0.587 (230) |
+| 2025 | 0.478 (249) | 0.512 (283) | 0.515 (206) |
+| 2026 | 0.524 (273) | 0.525 (282) | 0.545 (233) |
+
+The controls separate date-specific memory from a general preference for certain companies. `picks_larger` is the share of answers that chose the company that is larger today; `larger_wins` is the accuracy of always choosing the larger company; `acc_when_smaller` is the accuracy when the model chose the smaller company; `placebo_accuracy` scores the model's choice against the same pair's outcome at every other month-end in the period, and so shows how much accuracy remains when the date is wrong.
+
+| model | period | accuracy | placebo_accuracy | picks_larger | larger_wins | n_picked_smaller | acc_when_smaller | z_when_smaller |
+|---|---|---|---|---|---|---|---|---|
+| llama2:7b | pre_cutoff | 0.520 | 0.510 | 0.626 | 0.526 | 758 | 0.480 | -1.090 |
+| llama2:7b | post_cutoff | 0.477 | 0.494 | 0.596 | 0.521 | 433 | 0.464 | -1.490 |
+| llama3:8b | pre_cutoff | 0.569 | 0.543 | 0.569 | 0.525 | 924 | 0.550 | 3.027 |
+| llama3:8b | post_cutoff | 0.528 | 0.518 | 0.525 | 0.520 | 509 | 0.497 | -0.133 |
+| llama3.1:8b | pre_cutoff | 0.572 | 0.548 | 0.523 | 0.525 | 985 | 0.540 | 2.517 |
+| llama3.1:8b | post_cutoff | 0.550 | 0.524 | 0.499 | 0.519 | 335 | 0.519 | 0.710 |
 
 ## Leakage: identity probe on anonymised text (n=290)
 
@@ -159,20 +216,20 @@ By entry lag (trading days after the filing date, 10 bps cost):
 
 | signal | lag_0 | lag_1 | lag_2 | lag_5 |
 |---|---|---|---|---|
-| llm_score | 0.241 | 0.215 | 0.325 | 0.346 |
-| llm_score_chg | -0.189 | -0.226 | -0.297 | -0.203 |
-| llm_caution | -0.269 | -0.259 | -0.335 | -0.330 |
-| sim_yoy | -0.389 | -0.355 | -0.432 | -0.390 |
-| emb_sim_yoy | -0.578 | -0.576 | -0.624 | -0.634 |
-| emb_align_yoy | -0.069 | -0.088 | -0.103 | -0.150 |
+| llm_score | 0.224 | 0.224 | 0.299 | 0.312 |
+| llm_score_chg | -0.158 | -0.204 | -0.323 | -0.212 |
+| llm_caution | -0.178 | -0.196 | -0.262 | -0.216 |
+| sim_yoy | -0.362 | -0.329 | -0.389 | -0.378 |
+| emb_sim_yoy | -0.559 | -0.546 | -0.602 | -0.616 |
+| emb_align_yoy | -0.077 | -0.069 | -0.099 | -0.101 |
 
 By one-way cost (entry lag 1):
 
 | signal | 0_bps | 10_bps | 25_bps |
 |---|---|---|---|
-| llm_score | 0.307 | 0.215 | 0.076 |
-| llm_score_chg | -0.042 | -0.226 | -0.501 |
-| llm_caution | -0.169 | -0.259 | -0.393 |
-| sim_yoy | -0.293 | -0.355 | -0.449 |
-| emb_sim_yoy | -0.509 | -0.576 | -0.676 |
-| emb_align_yoy | -0.005 | -0.088 | -0.212 |
+| llm_score | 0.313 | 0.224 | 0.088 |
+| llm_score_chg | -0.019 | -0.204 | -0.481 |
+| llm_caution | -0.074 | -0.196 | -0.381 |
+| sim_yoy | -0.267 | -0.329 | -0.421 |
+| emb_sim_yoy | -0.479 | -0.546 | -0.645 |
+| emb_align_yoy | 0.014 | -0.069 | -0.194 |

@@ -41,28 +41,116 @@ def add_forward_returns(signals: pd.DataFrame, prices: pd.DataFrame, bt: dict) -
     return df
 
 
+def add_context_returns(events: pd.DataFrame, prices: pd.DataFrame, bt: dict, lookback: int = 63) -> pd.DataFrame:
+    """Add market-adjusted returns before and around each filing.
+
+    abn_before  return over the `lookback` trading days that end at the close
+                before d0, i.e. the period the filing reports on
+    abn_filing  return from the close before d0 to the entry close: the
+                market's reaction to the filing and to any earnings release
+                that accompanies it. The strategy enters after this window and
+                does not capture it.
+    """
+    idx, lag = prices.index, bt["entry_lag_days"]
+    bench = prices[bt["benchmark"]].to_numpy()
+    df = events.copy()
+    d0 = idx.searchsorted(df["filing_date"].to_numpy(), side="left")
+    windows = {"abn_before": (d0 - 1 - lookback, d0 - 1), "abn_filing": (d0 - 1, d0 + lag)}
+    for col in windows:
+        df[col] = np.nan
+    for ticker, rows in df.groupby("ticker").groups.items():
+        if ticker not in prices.columns:
+            continue
+        px, loc = prices[ticker].to_numpy(), df.index.get_indexer(rows)
+        for col, (a, b) in windows.items():
+            a, b = a[loc], b[loc]
+            ok = (a >= 0) & (b < len(idx))
+            a, b = np.where(ok, a, 0), np.where(ok, b, 0)
+            df.loc[rows, col] = np.where(ok, px[b] / px[a] - 1 - (bench[b] / bench[a] - 1), np.nan)
+    return df
+
+
 def _spearman(x: pd.Series, y: pd.Series) -> float:
     return x.rank().corr(y.rank())
 
 
+# Multiple of the standard error that an effect must reach to be detected with
+# 80% power in a two-sided test at the 5% level (1.96 + 0.84).
+DETECTABLE = 2.8
+
+
+def _ic_stats(events: pd.DataFrame, sig: str, ret: str, min_names: int) -> dict:
+    """Rank IC of `sig` against `ret` per calendar quarter, summarised across quarters."""
+    ics = []
+    for _, g in events.groupby(events["filing_date"].dt.to_period("Q")):
+        g = g[[sig, ret]].dropna()
+        if len(g) >= min_names and g[sig].nunique() > 1:
+            ics.append(_spearman(g[sig], g[ret]))
+    ics = pd.Series(ics, dtype=float).dropna()
+    n = len(ics)
+    se = ics.std(ddof=1) / math.sqrt(n) if n > 1 else np.nan
+    return {"mean_ic": ics.mean() if n else np.nan, "t_stat": ics.mean() / se if n > 1 and se > 0 else np.nan,
+            "quarters": n, "se": se, "min_detectable_ic": DETECTABLE * se}
+
+
 def information_coefficients(events: pd.DataFrame, signal_cols: list[str], horizons: list[int],
                              min_names: int = 20) -> pd.DataFrame:
-    """Rank IC per calendar quarter, then mean and t-stat across quarters."""
-    quarter = events["filing_date"].dt.to_period("Q")
+    """Rank IC per calendar quarter, then mean, t-stat and precision across quarters.
+
+    min_detectable_ic is the smallest true IC the sample would detect with 80%
+    power at the 5% level. A null result rules out effects larger than this,
+    not smaller ones.
+    """
+    return pd.DataFrame([{"signal": sig, "horizon": h, **_ic_stats(events, sig, f"abn_{h}", min_names)}
+                         for sig in signal_cols for h in horizons])
+
+
+def timing_profile(events: pd.DataFrame, signal_cols: list[str], cutoff: str, horizon: int,
+                   min_names: int = 20) -> pd.DataFrame:
+    """Rank IC of each signal against returns before, around and after the filing.
+
+    Needs the columns from add_context_returns and add_forward_returns. A signal
+    that reflects information the market already has correlates with the first
+    two windows but not with the third. Each cell is "IC (t-statistic)".
+    """
+    c = pd.Timestamp(cutoff)
+    periods = {"full": events, "pre_cutoff": events[events["filing_date"] <= c],
+               "post_cutoff": events[events["filing_date"] > c]}
+    windows = {"before_filing": "abn_before", "filing_window": "abn_filing", "after_entry": f"abn_{horizon}"}
     rows = []
     for sig in signal_cols:
-        for h in horizons:
-            ics = []
-            for _, g in events.groupby(quarter):
-                g = g[[sig, f"abn_{h}"]].dropna()
-                if len(g) >= min_names and g[sig].nunique() > 1:
-                    ics.append(_spearman(g[sig], g[f"abn_{h}"]))
-            ics = pd.Series(ics, dtype=float).dropna()
-            n = len(ics)
-            t = ics.mean() / (ics.std(ddof=1) / math.sqrt(n)) if n > 1 and ics.std(ddof=1) > 0 else np.nan
-            rows.append({"signal": sig, "horizon": h, "mean_ic": ics.mean() if n else np.nan,
-                         "t_stat": t, "quarters": n})
+        for period, ev in periods.items():
+            row = {"signal": sig, "period": period}
+            for name, col in windows.items():
+                s = _ic_stats(ev, sig, col, min_names)
+                row[name] = f"{s['mean_ic']:.3f} ({s['t_stat']:.1f})" if s["quarters"] > 1 else ""
+            rows.append(row)
     return pd.DataFrame(rows)
+
+
+def quantile_weights(s: pd.Series, q: int) -> pd.Series:
+    """Long-short weights: the top 1/q of names long and the bottom 1/q short.
+
+    Names with equal signal values share a rank range, so a group of tied names
+    that straddles a quantile boundary is split evenly across it rather than
+    ordered arbitrarily. Many LLM scores are tied (llm_caution takes 13
+    values), and any fixed tie-break such as ticker order would decide most of
+    each leg. Long weights sum to 1 and short weights to -1; if every name is
+    tied, all weights are zero.
+    """
+    n = len(s)
+    k = n / q
+    below, upto = s.rank(method="min") - 1, s.rank(method="max")  # the group occupies ranks [below, upto)
+    size = upto - below
+    top = (np.maximum(upto, n - k) - np.maximum(below, n - k)).clip(lower=0) / size
+    bottom = (np.minimum(upto, k) - np.minimum(below, k)).clip(lower=0) / size
+    return (top - bottom) / k
+
+
+def _leg_return(w: pd.Series, ret: pd.Series) -> float:
+    """Weighted return of one leg, renormalised over the names that have a return."""
+    ok = ret.notna() & (w > 0)
+    return float((w[ok] * ret[ok]).sum() / w[ok].sum()) if ok.any() else 0.0
 
 
 def long_short(events: pd.DataFrame, prices: pd.DataFrame, signal: str, bt: dict) -> pd.DataFrame:
@@ -86,16 +174,14 @@ def long_short(events: pd.DataFrame, prices: pd.DataFrame, signal: str, bt: dict
         if len(s) < 2 * q:
             prev_w = pd.Series(dtype=float)
             continue
-        bucket = ((s.rank(method="first") - 1) * q // len(s)).astype(int)
-        longs, shorts = s.index[bucket == q - 1], s.index[bucket == 0]
+        w = quantile_weights(s, q)
         ret = prices.loc[t_next, s.index] / prices.loc[t, s.index] - 1
-        gross = ret[longs].mean() - ret[shorts].mean()
+        gross = _leg_return(w.clip(lower=0), ret) - _leg_return((-w).clip(lower=0), ret)
 
-        w = pd.concat([pd.Series(1 / len(longs), index=longs), pd.Series(-1 / len(shorts), index=shorts)])
         turnover = w.sub(prev_w, fill_value=0).abs().sum()
         cost = turnover * cost_rate
         rows.append({"date": t_next, "gross": gross, "cost": cost, "net": gross - cost,
-                     "turnover": turnover, "n_long": len(longs), "n_short": len(shorts)})
+                     "turnover": turnover, "n_long": int((w > 0).sum()), "n_short": int((w < 0).sum())})
         prev_w = w
     return pd.DataFrame(rows).set_index("date") if rows else pd.DataFrame(
         columns=["gross", "cost", "net", "turnover", "n_long", "n_short"])

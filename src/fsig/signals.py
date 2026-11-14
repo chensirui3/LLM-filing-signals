@@ -39,14 +39,17 @@ def cosine(a: Counter, b: Counter) -> float:
     return dot / (na * nb)
 
 
-def similarity_signal(filings: pd.DataFrame) -> pd.Series:
+def similarity_signal(filings: pd.DataFrame) -> pd.DataFrame:
     """Cosine similarity of each MD&A with the same form filed about a year earlier.
+
+    Returns one row per filing with an MD&A: accession, mdna_chars (length of
+    the section) and sim_yoy (missing when there is no prior-year filing).
 
     This follows Cohen, Malloy and Nguyen (2020), "Lazy Prices": companies that
     change their filing language substantially tend to underperform. It
     requires no LLM and serves as the baseline for the LLM signals.
     """
-    out = {}
+    rows = []
     for _, grp in tqdm(filings.sort_values("filing_date").groupby(["ticker", "form"]), desc="similarity"):
         history: list[tuple[pd.Timestamp, Counter]] = []
         for r in grp.itertuples():
@@ -56,10 +59,10 @@ def similarity_signal(filings: pd.DataFrame) -> pd.Series:
             cur = bag(text)
             prior = [(abs((r.filing_date - d).days - 365), b) for d, b in history
                      if 320 <= (r.filing_date - d).days <= 410]
-            if prior:
-                out[r.accession] = cosine(cur, min(prior, key=lambda x: x[0])[1])
+            sim = cosine(cur, min(prior, key=lambda x: x[0])[1]) if prior else float("nan")
+            rows.append({"accession": r.accession, "mdna_chars": len(text), "sim_yoy": sim})
             history.append((r.filing_date, cur))
-    return pd.Series(out, name="sim_yoy", dtype=float)
+    return pd.DataFrame(rows, columns=["accession", "mdna_chars", "sim_yoy"])
 
 
 def build_signals(filings: pd.DataFrame, llm: dict, variant: str = "raw", emb: dict | None = None) -> pd.DataFrame:
@@ -72,7 +75,9 @@ def build_signals(filings: pd.DataFrame, llm: dict, variant: str = "raw", emb: d
     scored = df.dropna(subset=["llm_score"])
     df["llm_score_chg"] = scored.groupby("ticker")["llm_score"].diff()
 
-    df = df.merge(similarity_signal(filings).rename_axis("accession").reset_index(), on="accession", how="left")
+    df = df.merge(similarity_signal(filings), on="accession", how="left")
+    # Share of the MD&A that the LLM read: only the first max_chunks chunks are scored.
+    df["scored_share"] = (llm["chunk_chars"] * llm["max_chunks"] / df["mdna_chars"]).clip(upper=1)
     if emb:  # NaN columns if the embed step has not been run
         from .embed import embedding_signals
 

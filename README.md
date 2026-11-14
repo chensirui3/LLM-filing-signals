@@ -22,8 +22,8 @@ checks:
 | Check | What it does | Where |
 |---|---|---|
 | Cutoff split | Reports every result separately before and after the model's training cutoff. Only the post-cutoff results are free of possible look-ahead. | `backtest.split_stats` |
-| Memory probe | Gives the model no filing text, only two company names and a date, and asks which stock had the higher return over the following three months. Accuracy above chance before the cutoff but not after it indicates memorised outcomes. Pair order is randomised, so a model that always gives the same answer scores 50%. | `leakage.memory_probe` |
-| Memory controls | Tests whether the memory probe's accuracy is specific to the date or reflects a general preference for larger, better-known companies: how often the model picks the larger company, and how accurate its picks are when scored against other dates. | `leakage.memory_controls` |
+| Memory probe | Gives the model no filing text, only two company names and a date, and asks which stock had the higher return over the following three months. Accuracy above chance before the cutoff but not after it would indicate memorised outcomes. Each pair is asked in both orders and only order-independent answers are scored. The probe is run on three Llama versions with different training cutoffs. | `leakage.run_memory_probe` |
+| Memory controls | Tests whether the memory probe's accuracy is specific to the date or reflects a general preference for certain companies: how often the model picks the larger company, and how accurate its picks are when scored against other dates. | `leakage.memory_controls` |
 | Identity probe | Masks the company name and years, then asks the model to name the company. Measures whether anonymisation prevents the model from identifying the filer. | `leakage.identity_probe` |
 | Raw vs anonymised | Scores every filing twice, with and without the company masked, and tests whether the difference between the two scores predicts returns before the cutoff. | `robustness.variant_comparison` |
 
@@ -36,17 +36,39 @@ are in [reports/report_raw.md](reports/report_raw.md) and
 
 **No signal predicts returns.** None of the six signals reaches |t| = 2 at any
 horizon. The pre-declared primary signal has a net long-short Sharpe ratio of
--0.23 (-0.50 before the cutoff and 0.49 after, neither significant). The Lazy
+-0.20 (-0.45 before the cutoff and 0.41 after, neither significant). The Lazy
 Prices similarity signals have the opposite sign to the published effect in
 this large-cap sample. Varying the entry lag (0 to 5 days) or trading costs
-(0 to 25 bps) does not change any conclusion.
+(0 to 25 bps) does not change any conclusion. The sample can only rule out
+large effects: the smallest rank IC it would reliably detect is between 0.04
+and 0.07, depending on the signal.
 
-**The model has memorised outcomes.** Given no filing text, it picks the better
-performer of two stocks 59% of the time before its cutoff (n = 300, z = 3.2)
-and 47% after. The effect is specific to the date rather than a preference for
-well-known companies: the model picks the larger company only 51% of the time,
-and when its picks are scored against the same pair at other dates, accuracy
-falls to 51%.
+![Long-short cumulative returns](reports/long_short_raw.png)
+
+**The scores carry real information, but the market already has it.** The LLM
+tone score has a rank IC of 0.089 (t = 4.2) with the stock's market-adjusted
+return over the 63 trading days *before* the filing, and this holds after the
+training cutoff (0.080, t = 2.8). Against the 63 days after entry the IC is
+0.016 (t = 0.8). The model reads the reported quarter correctly; by the time
+the filing can be traded, that information is in the price.
+
+**The memory probe gives little evidence of memorised outcomes.** With no
+filing text, Llama 3.1 picks the better performer of two stocks 57.2% of the
+time before its cutoff (n = 2,067, z = 6.6), but also 55.0% of the time after
+it (n = 669, z = 2.6); the fall of 2.2 points is not significant (z = 1.0).
+Most of the accuracy survives when the date is wrong: scored against the same
+pair at other dates, the model's picks are still right 54.8% of the time. The
+model therefore has a stable preference for companies that tended to
+outperform, and that preference kept working after the cutoff. The boundary
+does not move with the cutoff either: for questions dated 2023, Llama 3 8B
+(cutoff March 2023) scores 57.6% and Llama 3.1 (cutoff December 2023) scores
+58.8%. Llama 3 8B shows a larger fall after its cutoff (56.9% to 52.8%,
+z = 2.2), which is the only sign of date-specific memory. Llama 2 is close to
+chance throughout. An earlier version of this probe, with 300 pairs per period
+and a single question order, appeared to show a clear effect (59% against
+47%); it did not hold at this scale.
+
+![Memory probe accuracy by year](reports/memory_probe.png)
 
 **Anonymisation does not conceal the company.** From text with the name,
 ticker and years masked, the model names the correct company 82% of the time.
@@ -54,12 +76,17 @@ ticker and years masked, the model names the correct company 82% of the time.
 **There is no evidence that memorised outcomes inflate the backtest.** If the
 scores drew on the model's knowledge of subsequent events, they would predict
 returns before the cutoff. They do not: the three LLM-scored signals have
-pre-cutoff net Sharpe ratios of 0.00, -0.50 and -0.32, each lower than after
-the cutoff. Raw and anonymised scores also agree closely (correlation 0.94),
-and the gap between them does not predict returns before the cutoff (rank IC
-between -0.02 and -0.03, t between -1.2 and -1.8). This second comparison is
-weak evidence on its own, because the identity probe shows that anonymisation
-does not conceal the company. These results apply to this model and prompt.
+pre-cutoff net Sharpe ratios of -0.01, -0.45 and -0.14. Raw and anonymised
+scores also agree closely (correlation 0.94), and the gap between them does
+not predict returns before the cutoff (rank IC between -0.02 and -0.03, t
+between -1.2 and -1.8). This second comparison is weak evidence on its own,
+because the identity probe shows that anonymisation does not conceal the
+company. One pattern remains unexplained: before the cutoff the tone score is
+correlated with the return around the filing date (IC 0.070, t = 4.1), and
+after the cutoff it is not (-0.022, t = -0.6, 12 quarters). The post-cutoff
+sample is too short to tell whether this is sampling variation or the model
+recalling how filings were received. These results apply to this model and
+prompt.
 
 ## Risk-factor comparison tool
 
@@ -118,7 +145,17 @@ is authoritative.
    - Rank IC against market-adjusted returns at 5, 21 and 63 trading days,
      computed per calendar quarter and then averaged, with a t-statistic.
    - Monthly-rebalanced top-minus-bottom quintile portfolio, equal-weighted,
-     with 10 bps one-way costs charged on turnover.
+     with 10 bps one-way costs charged on turnover. Companies with equal
+     scores are split evenly across a quintile boundary, so the result does
+     not depend on how ties are ordered.
+   - Rank IC against returns before and around the filing, to show whether a
+     signal reflects information the market already has.
+7. **Memory probe**: 400 random stock pairs per calendar year (4,775 in all),
+   each asked in both orders, with the model answering by ticker. Only pairs
+   on which the model names the same company in both orders are scored. A pair
+   counts as pre-cutoff when its whole three-month window ends before the
+   model's cutoff. The cutoffs are those in Meta's model cards: September 2022
+   for Llama 2, March 2023 for Llama 3 8B and December 2023 for Llama 3.1.
 
 ## Usage
 
@@ -133,11 +170,13 @@ py -3.12 -m venv .venv
 copy .env.example .env        # then set EDGAR_USER_AGENT in .env
 ollama pull llama3.1:8b
 ollama pull nomic-embed-text
+ollama pull llama3:8b         # optional: the two older models used only by the memory probe
+ollama pull llama2:7b
 ```
 
 ```powershell
 .venv\Scripts\python -m fsig all          # universe, download, parse, prices, extract, embed, signals, report
-.venv\Scripts\python -m fsig leakage      # memory and identity probes, added to the report
+.venv\Scripts\python -m fsig leakage      # memory probe on every installed model, identity probe; added to the reports
 .venv\Scripts\python -m fsig extract --variant anon   # optional: score the anonymised text (takes as long as the first scoring run)
 .venv\Scripts\python -m fsig signals --variant anon
 .venv\Scripts\python -m fsig robustness   # lag and cost sensitivity; raw vs anonymised comparison if both variants exist
@@ -150,7 +189,8 @@ are written to `reports/`.
 Approximate run times on an RTX 4090 for the default 100 companies from 2015:
 download about 70 minutes (EDGAR rate limit), LLM scoring about 3 hours (0.75 s
 per chunk with 4 parallel requests), embedding about 2 hours when sharing the
-GPU with scoring, and a few minutes for the remaining steps.
+GPU with scoring, the memory probe about 30 minutes per model, and a few
+minutes for the remaining steps.
 
 ## Limitations
 
@@ -159,9 +199,10 @@ GPU with scoring, and a few minutes for the remaining steps.
   delisted firms. A long-short portfolio offsets this only in part. Removing
   the bias requires point-in-time index membership and delisting returns (for
   example from CRSP), which are not freely available.
-- **Short post-cutoff sample.** The post-cutoff period is under three years
-  (35 monthly observations), so estimates there are imprecise and the tests
-  have low power.
+- **Low power.** With 100 companies and about 45 quarters, the smallest rank
+  IC the study would detect with 80% power is 0.04 to 0.07. A smaller real
+  effect would not be found. The post-cutoff period is under three years
+  (35 monthly observations), so estimates there are less precise still.
 - **Section parsing.** The MD&A is found in 93% of 10-Ks and 99% of 10-Qs. The
   parser tries the `Item` header first, then the MD&A title alone (handling
   titles repeated as page headers), then the opening headings used by banks.
@@ -172,16 +213,26 @@ GPU with scoring, and a few minutes for the remaining steps.
   includes a few thousand characters of headings before the section itself.
   Coverage is printed by the `parse` step.
 - **Truncation.** Only the first 9,000 tokens (approximately) of each MD&A are
-  scored.
+  scored, which is a median of 47% of the section in a 10-K and 67% in a 10-Q.
+  The liquidity discussion usually comes late in the section, so the
+  `llm_caution` signal is the most affected.
+- **Price data.** Prices are Yahoo Finance adjusted closes and have not been
+  checked against a second source. The losses of the two similarity
+  portfolios are concentrated in April and May 2026, when several
+  semiconductor stocks in their short legs rose by 60% to 110% in a month.
 - **Returns.** Returns are market-adjusted (stock minus SPY), not
   factor-adjusted. Borrow costs and market impact are not modelled beyond the
   flat cost assumption.
 - **Multiple testing.** Six signals at three horizons give eighteen tests. For
   this reason a single primary signal was declared before any results were
   computed.
-- **Memory probe.** The probe uses one random draw of 300 pairs per period,
-  one prompt and one model. Company size in the controls is the current rank,
-  not size at the time of the question.
+- **Memory probe.** The probe uses one prompt and three models from one
+  family. Its above-chance accuracy cannot be separated from the universe
+  selection bias: companies chosen for their current size outperformed over
+  the sample, so a model that prefers them is right more often than not,
+  before and after its cutoff. Company size in the controls is the current
+  rank, not size at the time of the question. Llama 2's fine-tuning data runs
+  to July 2023, later than its pretraining cutoff.
 
 ## Repository layout
 

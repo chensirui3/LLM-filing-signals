@@ -24,6 +24,13 @@ from . import edgar, embed, extract, leakage, prices, report, riskdiff, robustne
 from .config import load_config
 
 
+def rebuild_reports(cfg: dict, px: pd.DataFrame) -> None:
+    """Rebuild the report of every variant that has a signal table."""
+    for v in ("raw", "anon"):
+        if (edgar.DATA / f"signals_{v}.parquet").exists():
+            print("wrote", report.make_report(signals.load_signals(v), px, cfg, v))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="fsig", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=["universe", "download", "parse", "prices", "extract", "embed",
@@ -36,7 +43,6 @@ def main() -> None:
     ap.add_argument("--start", help="override start_date (YYYY-MM-DD)")
     ap.add_argument("--quantiles", type=int, help="override backtest.quantiles")
     ap.add_argument("--retry-failed", action="store_true", help="parse: re-parse filings with no MD&A found")
-    ap.add_argument("--probe-n", type=int, default=300, help="sample size per leakage probe")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -72,34 +78,23 @@ def main() -> None:
     if run("report"):
         print("wrote", report.make_report(signals.load_signals(args.variant), prices.load_prices(), cfg, args.variant))
     if args.step == "leakage":
-        sig, px = signals.load_signals(args.variant), prices.load_prices()
+        sig, px, lk = signals.load_signals(args.variant), prices.load_prices(), cfg["leakage"]
         names = dict(zip(sig["ticker"], sig["name"]))
-        sample, fwd = leakage.memory_sample(px, names, llm, bt["benchmark"], per_period=args.probe_n)
-        mem = leakage.memory_summary(sample)
-        uni = pd.read_parquet(edgar.DATA / "universe.parquet")  # ordered largest first
-        ctrl = leakage.memory_controls(sample, fwd, {t: i for i, t in enumerate(uni["ticker"])}, llm["training_cutoff"])
-        ident = leakage.identity_probe(edgar.load_filings(), llm, n=args.probe_n)
+        uni = pd.read_parquet(edgar.UNIVERSE)  # ordered largest first
+        results = leakage.run_memory_probe(px, names, llm, lk, bt["benchmark"],
+                                           {t: i for i, t in enumerate(uni["ticker"])}, cfg["start_date"])
+        report.save_section("all:memory", "Leakage: memory probe (no filing text given)",
+                            report.memory_section(results, report.memory_chart(results)))
+        ident = leakage.identity_probe(edgar.load_filings(), llm, n=lk["identity_sample"])
         ident_summary = ident.drop(columns="accession").mean().to_frame("share").rename_axis("metric")
-        report.save_section(
-            "all:memory", "Leakage: memory probe (no filing text given)",
-            "The model is given two company names and a date, with no filing text, and asked "
-            "which stock had the higher return over the following three months. Accuracy above "
-            "50% before the cutoff but not after it indicates that the model has memorised "
-            "outcomes.\n\n" + report._md(mem)
-            + "\n\nThe controls below separate date-specific memory from a general preference "
-            "for certain companies. `picks_larger` is the share of questions in which the model "
-            "chose the company that is larger today; `larger_wins` is the accuracy of always "
-            "choosing the larger company; `acc_when_smaller` is the model's accuracy when it "
-            "chose the smaller company; `placebo_accuracy` scores the model's choice against "
-            "the same pair's outcome at every other month-end in the period, and so shows how "
-            "much accuracy remains when the date is wrong.\n\n"
-            + report._md(ctrl.drop(columns=["n", "accuracy"])))
         report.save_section(
             "all:identity", f"Leakage: identity probe on anonymised text (n={len(ident)})",
             "Share of anonymised MD&A excerpts for which the model named the correct company "
             "and fiscal year.\n\n" + report._md(ident_summary))
-        print(mem.to_string(), "\n", ctrl.T.to_string(), "\n", ident_summary.to_string())
-        print("wrote", report.make_report(sig, px, cfg, args.variant))
+        for model, r in results.items():
+            print(f"\n{model} (cutoff {r['cutoff']})\n{r['summary'].to_string()}\n{r['controls'].to_string()}")
+        print(ident_summary.to_string())
+        rebuild_reports(cfg, px)
     if args.step == "riskdiff":
         if not args.ticker:
             ap.error("riskdiff needs --ticker")
@@ -117,7 +112,6 @@ def main() -> None:
             f"{bt['cost_bps']} bps cost):\n\n" + report._md(by_lag)
             + f"\n\nBy one-way cost (entry lag {bt['entry_lag_days']}):\n\n" + report._md(by_cost))
         print(by_lag.to_string(), "\n", by_cost.to_string())
-        variants = [args.variant]
         if all((edgar.DATA / f"signals_{v}.parquet").exists() for v in ("raw", "anon")):
             agree, gap_ic = robustness.variant_comparison(
                 signals.load_signals("raw"), signals.load_signals("anon"), px, bt, llm["training_cutoff"])
@@ -132,9 +126,7 @@ def main() -> None:
                 "would be positive before the cutoff and close to zero after it.\n\n"
                 + report._md(gap_ic))
             print(agree.to_string(), "\n", gap_ic.to_string())
-            variants = ["raw", "anon"]
-        for v in variants:
-            print("wrote", report.make_report(signals.load_signals(v), px, cfg, v))
+        rebuild_reports(cfg, px)
 
 
 if __name__ == "__main__":

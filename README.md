@@ -243,12 +243,6 @@ rebuilt tables can differ from the published ones in the third decimal place.
 Price data is not redistributed here. The leakage step still needs Ollama and
 the downloaded filings.
 
-Approximate run times on an RTX 4090 for the default 100 companies from 2015:
-download about 70 minutes (EDGAR rate limit), LLM scoring about 3 hours (0.75 s
-per chunk with 4 parallel requests), embedding about 2 hours when sharing the
-GPU with scoring, the memory probe about 30 minutes per model, and a few
-minutes for the remaining steps.
-
 ## Limitations
 
 - **Universe selection bias.** Companies are selected by *current* market

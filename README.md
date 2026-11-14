@@ -51,11 +51,15 @@ falls to 51%.
 **Anonymisation does not conceal the company.** From text with the name,
 ticker and years masked, the model names the correct company 82% of the time.
 
-**The memorised outcomes do not affect the filing scores.** Raw and anonymised
-scores have a correlation of 0.94, and the gap between them does not predict
-returns before the cutoff (rank IC between -0.02 and -0.03, t between -1.2 and
--1.8). Scoring the tone of a filing does not appear to draw on the model's
-knowledge of subsequent events, at least for this model and prompt.
+**There is no evidence that memorised outcomes inflate the backtest.** If the
+scores drew on the model's knowledge of subsequent events, they would predict
+returns before the cutoff. They do not: the three LLM-scored signals have
+pre-cutoff net Sharpe ratios of 0.00, -0.50 and -0.32, each lower than after
+the cutoff. Raw and anonymised scores also agree closely (correlation 0.94),
+and the gap between them does not predict returns before the cutoff (rank IC
+between -0.02 and -0.03, t between -1.2 and -1.8). This second comparison is
+weak evidence on its own, because the identity probe shows that anonymisation
+does not conceal the company. These results apply to this model and prompt.
 
 ## Risk-factor comparison tool
 
@@ -196,3 +200,8 @@ src/fsig/report.py      markdown reports and charts
 tests/                  unit tests for parsing, timing, signals and probes
 reports/                generated reports, charts and example comparisons
 ```
+
+## License
+
+Released under the [MIT License](LICENSE). This project is for research and
+educational purposes and is not investment advice.

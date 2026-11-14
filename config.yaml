@@ -1,0 +1,32 @@
+# Everything that defines the experiment lives here, so a run is reproducible
+# from this file plus the code.
+
+universe_size: 100          # largest US filers by SEC's market-cap ordering
+start_date: "2015-01-01"    # first filing date to include
+forms: ["10-K", "10-Q"]
+
+llm:
+  model: "llama3.1:8b"
+  host: "http://localhost:11434"
+  training_cutoff: "2023-12-31"   # Meta's documented cutoff for Llama 3.1
+  chunk_chars: 12000              # ~3k tokens of MD&A per call
+  max_chunks: 3                   # first N chunks of each MD&A
+  num_ctx: 8192
+  workers: 4                      # concurrent requests to Ollama
+
+backtest:
+  entry_lag_days: 1         # trading days skipped after the filing date
+  horizons: [5, 21, 63]     # event-study horizons, in trading days
+  quantiles: 5
+  max_signal_age_days: 100  # a filing's signal expires after this many days
+  cost_bps: 10              # one-way trading cost
+  benchmark: "SPY"
+  primary_signal: "llm_score_chg"   # declared before looking at results
+
+embed:
+  model: "nomic-embed-text"
+  host: "http://localhost:11434"
+  prefix: "clustering: "      # nomic models expect a task prefix; this one is for symmetric similarity
+  chunk_chars: 1500
+  batch: 32
+  workers: 2

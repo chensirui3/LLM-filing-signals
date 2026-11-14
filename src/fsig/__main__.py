@@ -11,6 +11,7 @@ Steps, in order:
   report     run the backtest and write reports/report_<variant>.md
   leakage    run the memory and identity probes, append them to the report
   robustness entry-lag and cost sensitivity; raw vs anonymised score comparison
+  riskdiff   what changed in a company's Risk Factors vs last year  (--ticker NVDA [--year 2023])
   all        universe -> report
 """
 from __future__ import annotations
@@ -19,14 +20,17 @@ import argparse
 
 import pandas as pd
 
-from . import edgar, embed, extract, leakage, prices, report, robustness, sections, signals
+from . import edgar, embed, extract, leakage, prices, report, riskdiff, robustness, sections, signals
 from .config import load_config
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="fsig", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=["universe", "download", "parse", "prices", "extract", "embed",
-                                     "signals", "report", "leakage", "robustness", "all"])
+                                     "signals", "report", "leakage", "robustness", "riskdiff", "all"])
+    ap.add_argument("--ticker", help="riskdiff: company ticker")
+    ap.add_argument("--year", type=int, help="riskdiff: filing year of the 10-K (default: latest)")
+    ap.add_argument("--no-summary", action="store_true", help="riskdiff: skip the LLM one-line summaries")
     ap.add_argument("--variant", choices=["raw", "anon"], default="raw")
     ap.add_argument("--size", type=int, help="override universe_size")
     ap.add_argument("--start", help="override start_date (YYYY-MM-DD)")
@@ -94,6 +98,11 @@ def main() -> None:
             + report._md(ident_summary))
         print(mem.to_string(), "\n", ctrl.T.to_string(), "\n", ident_summary.to_string())
         print("wrote", report.make_report(sig, px, cfg, args.variant))
+    if args.step == "riskdiff":
+        if not args.ticker:
+            ap.error("riskdiff needs --ticker")
+        print("wrote", riskdiff.risk_diff(edgar.load_filings(), args.ticker, args.year, cfg["embed"],
+                                          None if args.no_summary else llm))
     if args.step == "robustness":
         px = prices.load_prices()
         sig = signals.load_signals(args.variant)

@@ -51,6 +51,30 @@ cutoff (rank IC between -0.02 and -0.03, t between -1.2 and -1.8). Reading a
 filing and being asked for its tone does not trigger recall of what happened
 next, at least for this model and prompt.
 
+## Risk-factor diff tool
+
+A by-product of the same pipeline: what changed in a company's Risk Factors
+since last year's 10-K?
+
+```bash
+.venv\Scripts\python -m fsig riskdiff --ticker NVDA --year 2023
+```
+
+Paragraphs are matched by meaning with embeddings, then sorted into unchanged,
+edited (shown as a word diff), rewritten, added and removed. The local LLM
+writes a one-line summary of each added and removed risk. Examples:
+
+- [NVIDIA, 10-K filed February 2023](reports/riskdiff_NVDA_2023.md): the new
+  US export licence requirements for China and the move of operations out of
+  China appear as added risks.
+- [Boeing, 10-K filed January 2020](reports/riskdiff_BA_2020.md): the 737 MAX
+  grounding and production halt.
+- [Meta, 10-K filed February 2022](reports/riskdiff_META_2022.md)
+
+The similarity threshold separating "rewritten" from "added" (0.93) was set by
+reading matched pairs for one company, not tuned on labelled data. The LLM
+summaries can be wrong; the quoted text is the source.
+
 ## Method
 
 1. **Universe**: the largest US companies in the SEC ticker file that file 10-Ks.
@@ -141,6 +165,7 @@ src/fsig/signals.py  per-filing signal table, Lazy Prices baseline
 src/fsig/backtest.py forward returns, rank IC, long-short portfolio
 src/fsig/leakage.py  memory and identity probes, memory controls
 src/fsig/robustness.py lag and cost sensitivity, raw vs anonymised comparison
+src/fsig/riskdiff.py year-over-year Risk Factors diff
 src/fsig/report.py   markdown report and charts
 tests/               timing and parsing tests
 ```

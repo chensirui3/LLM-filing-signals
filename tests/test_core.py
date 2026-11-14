@@ -167,3 +167,25 @@ def test_variant_gap_ic_detects_scores_nudged_towards_outcomes():
     agree, gap_ic = variant_comparison(raw, anon, prices, bt, "2030-01-01")
     assert gap_ic.loc[gap_ic["period"] == "pre_cutoff", "mean_ic"].iloc[0] > 0.9
     assert agree.loc["llm_score", "correlation"] > 0.5
+
+
+def test_risk_diff_classifies_paragraphs():
+    from fsig.riskdiff import classify, inline_diff, paragraphs
+
+    base = "We depend on a small number of suppliers for key components and any disruption could delay shipments and harm revenue and margins. " * 2
+    cyber = "A breach of our information systems could expose customer data and lead to regulatory fines, litigation and reputational damage for us. " * 2
+    export = "New export licensing requirements restrict sales of our fastest processors to certain countries and may reduce our revenue there. " * 2
+    old = [base, cyber]
+    new = [base, cyber.replace("regulatory fines", "large regulatory fines and penalties"), export]
+    e = np.eye(3, dtype=np.float32)
+    rows, removed = classify(old, new, e[:2], e)  # paragraph 3 is orthogonal to everything old
+    assert [r["status"] for r in rows] == ["unchanged", "edited", "added"] and removed == []
+    rows, removed = classify(new, old, e, e[:2])  # reversed: the export paragraph was removed
+    assert [r["old"] for r in removed] == [2]
+
+    d = inline_diff("could lead to regulatory fines and litigation", "could lead to large regulatory fines and penalties")
+    assert "**large**" in d and "~~litigation~~" in d
+
+    text = "Risks Related to Supply\n" + base + "\nmanufacturing yields; and\n" + cyber
+    paras = paragraphs(text)
+    assert len(paras) == 2 and paras[1]["heading"] == "Risks Related to Supply"  # the list item is not a heading

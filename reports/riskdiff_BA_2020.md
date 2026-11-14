@@ -1,0 +1,160 @@
+# BOEING CO (BA): what changed in Risk Factors
+
+10-K filed 2020-01-31 compared with the 10-K filed 2019-02-08.
+Paragraphs: 51 last year, 57 this year.
+
+| | paragraphs | share of this year's text |
+|---|---|---|
+| unchanged | 23 | 32% |
+| edited | 21 | 39% |
+| rewritten | 6 | 12% |
+| added | 7 | 18% |
+| removed (from last year) | 3 | |
+
+Matching is by embedding similarity (nomic-embed-text); one-line summaries are written by llama3.1:8b and can be wrong. Read the quoted text.
+
+## New this year (7)
+
+**Grounding of 737 MAX aircraft has reduced revenues and cash flows.**
+
+> On March 13, 2019, the Federal Aviation Administration (FAA) issued an order to suspend operations of all 737 MAX aircraft in the U.S. and by U.S. aircraft operators following two fatal 737 MAX accidents. Non-U.S. civil aviation authorities have issued directives to the same effect. Deliveries of the 737 MAX have been suspended until clearance is granted by the appropriate regulatory authorities. The grounding has reduced revenues, operating margins, and cash flows, and will continue to do so until production and deliveries resume and production rates return to pre-grounding levels. In …
+
+**Uncertainty about regulatory approvals for the 737 MAX.**
+
+> The 737 MAX fleet is currently grounded, and we have temporarily suspended production of the 737 MAX. We are subject to a number of risks and uncertainties related to the 737 MAX. These risks include uncertainties regarding the timing and conditions of 737 MAX regulatory approvals, delays in the resumption of production, lower than planned production rates and/or delivery rates, increased considerations to customers, increased supplier costs and supply chain health, changes to the assumptions and estimates made in our financial statements regarding the 737 program, and potential outcomes of …
+
+**Regulatory approval delays could have a material adverse effect on the company's financial position and operations.**
+
+> Any further delays in regulatory approval of the 737 MAX, the resumption of 737 production and/or deliveries, further disruptions to suppliers and/or the long-term health of the production system, supplier claims or assertions, or changes to estimated concessions or other considerations we expect to provide to customers could have a material adverse effect on our financial position, results of operations, and/or cash flows. The FAA and other non-U.S. civil aviation authorities will determine the timing and conditions of return to service in each relevant jurisdiction. We have assumed that …
+
+**Changes in estimates and assumptions about the 737 program could have a material impact on the company's financial position and results.**
+
+> We have made significant estimates with respect to the 737 program regarding the number of units to be produced, the period during which those units are likely to be produced, and the units’ expected sales prices, production costs, program tooling and other non-recurring costs, and routine warranty costs. In addition to the estimated timing of the resumption of deliveries, we have made assumptions regarding outcomes of accident investigations and other government inquiries, timing of future 737 production rate increases, timing and sequence of future deliveries, supply chain health as we …
+
+**Failure to return 737 MAX to service on schedule will incur significant additional costs and production delays.**
+
+> During the second quarter of 2019, we announced plans to reduce the 737 production rate from 52 aircraft per month to 42 per month. During the fourth quarter of 2019, we announced plans to temporarily suspend 737 MAX production beginning in January 2020. Impacts related to the reduction in production rate followed by the production suspension have significantly increased costs to produce aircraft included in the current accounting quantity and will result in reduced 737 program and overall BCA segment operating margins when deliveries resume. We have also made significant assumptions …
+
+**Estimating costs and revenues on fixed-price contracts is inherently risky due to performance-related price incentives and penalties.**
+
+*Under: We enter into fixed-price contracts which could subject us to losses if we have cost overruns.*
+
+> Hawk and MQ-25 competitions, we recorded a loss of $400 million associated with options for 346 T-7A Red Hawk aircraft and a loss of $291 million related to the MQ-25 Engineering, Manufacturing and Development (EMD) contract. The long term nature of many of our contracts makes the process of estimating costs and revenues on fixed-price contracts inherently risky. Fixed-price contracts often contain price incentives and penalties tied to performance which can be difficult to estimate and have significant impacts on margins. In addition, some of our contracts have specific provisions relating …
+
+**Divested businesses may not perform as expected, leading to additional financial obligations or losses.**
+
+*Under: We may not realize the anticipated benefits of mergers, acquisitions, joint ventures/strategic alliances or divestitures.*
+
+> following the transaction. Nonperformance by those divested businesses could affect our future financial results through additional payment obligations, higher costs or asset write-downs.
+
+## Removed since last year (3)
+
+**Government policy and legislation can negatively impact the company's business.**
+
+*Under: Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.*
+
+> foreign policy, macroeconomic conditions and the ability of the U.S. government to enact relevant legislation such as authorization and appropriations bills.
+
+**Cybersecurity risks could impact sales, increase expenses, and harm Boeing's reputation.**
+
+*Under: Business disruptions could seriously affect our future sales and financial condition or increase our costs and expenses.*
+
+> use of our data, information systems or networks could impact our sales, increase our expenses and/or have an adverse effect on the reputation of Boeing and of our products and services.
+
+**Changes in escalation amounts can significantly impact revenues and operating margins in our Commercial Airplanes business.**
+
+*Under: Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.*
+
+> fluctuate significantly from period to period. Changes in escalation amounts can significantly impact revenues and operating margins in our Commercial Airplanes business.
+
+## Rewritten: same topic, new wording (6)
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.**
+
+> *Last year:* The Bipartisan Budget Act of 2018 raised preexisting spending caps for fiscal years 2018 and 2019 (FY18 and FY19). The consolidated spending bills signed into law in September 2018 provide defense funding for FY19. However, other departments and agencies, including the National Aeronautics and Space Administration (NASA) and the Federal Aviation Administration (FAA), are being temporarily funded …
+>
+> *This year:* The Bipartisan Budget Act of 2019 raised preexisting spending limits on federal discretionary defense and non-defense spending for fiscal years 2020 and 2021 (FY20 and FY21), reducing budget uncertainty and the risk of sequestration. Although FY20 appropriations have been enacted and FY21 topline funding levels have been agreed to, the timeliness of FY21 and future appropriations for government …
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.**
+
+> *Last year:* Operational challenges impacting the production system for one or more of our commercial aircraft programs could result in production delays and/or failure to meet customer demand for new aircraft, either of which would negatively impact our revenues and operating margins. Our commercial aircraft production system is extremely complex. Operational issues, including delays or defects in supplier …
+>
+> *This year:* Operational challenges impacting the production system for one or more of our commercial aircraft programs could result in production delays and/or failure to meet customer demand for new aircraft, either
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.**
+
+> *Last year:* Market conditions have a significant impact on demand for our commercial aircraft and related services. The commercial aircraft market is predominantly driven by long-term trends in airline passenger and cargo traffic. The principal factors underlying long-term traffic growth are sustained economic growth and political stability both in developed and emerging markets. Demand for our commercial …
+>
+> *This year:* Market conditions have a significant impact on demand for our commercial aircraft and related services. The commercial aircraft market is predominantly driven by long-term trends in airline passenger and cargo traffic. The principal factors underlying long-term traffic growth are sustained economic growth and political stability both in developed and emerging markets. Demand for our commercial …
+
+**We enter into fixed-price contracts which could subject us to losses if we have cost overruns.**
+
+> *Last year:* Our BDS and BGS defense businesses generated approximately 65% and 77% of their 2018 revenues from fixed-price contracts. While fixed-price contracts enable us to benefit from performance improvements, cost reductions and efficiencies, they also subject us to the risk of reduced margins or incurring losses if we are unable to achieve estimated costs and revenues. If our estimated costs exceed our …
+>
+> *This year:* Our BDS and BGS defense businesses generated approximately 70% and 73% of their 2019 revenues from fixed-price contracts. While fixed-price contracts enable us to benefit from performance improvements, cost reductions and efficiencies, they also subject us to the risk of reduced margins or incurring losses if we are unable to achieve estimated costs and revenues. If our estimated costs exceed our …
+
+**Unauthorized access to our or our customers’ information and systems could negatively impact our business.**
+
+> *Last year:* We are involved in a number of litigation matters. These matters may divert financial and management resources that would otherwise be used to benefit our operations. No assurances can be given that the results of these matters will be favorable to us. An adverse resolution of any of these lawsuits, or future lawsuits, could have a material impact on our financial position and results of …
+>
+> *This year:* We are involved in a number of litigation matters. These matters may divert financial and management resources that would otherwise be used to benefit our operations. No assurances can be given that the results of these matters will be favorable to us. An adverse resolution of any of these lawsuits, or future lawsuits, could have a material impact on our financial position and results of …
+
+**We use estimates in accounting for many contracts and programs. Changes in our estimates could adversely affect our future financial results.**
+
+> *Last year:* With respect to each of our commercial aircraft programs, inventoriable production costs (including overhead), program tooling and other non-recurring costs and routine warranty costs are accumulated and charged as cost of sales by program instead of by individual units or contracts. A program consists of the estimated number of units (accounting quantity) of a product to be produced in a …
+>
+> *This year:* With respect to each of our commercial aircraft programs, inventoriable production costs (including overhead), program tooling and other non-recurring costs and routine warranty costs are accumulated and charged as cost of sales by program instead of by individual units or contracts. A program consists of the estimated number of units (accounting quantity) of a product to be produced in a …
+
+## Edited paragraphs (21)
+
+Most changed first. ~~Struck~~ words were removed, **bold** words added; … marks unchanged text.
+
+**Some of our and our suppliers’ workforces are represented by labor unions, which may lead to work stoppages.** (36% of words changed)
+
+> … costs to individual contracts based on U.S. Cost Accounting Standards ~~which can also affect contract profitability. We also provide other postretirement benefits to certain of our employees, consisting principally of health care coverage for eligible retirees and qualifying dependents. Our estimates of future costs associated with these benefits are also subject to assumptions, including estimates of the level of medical cost increases. For a discussion regarding how our financial statements can be affected by pension and other postretirement plan accounting policies, see “Management's Discussion and Analysis-Critical Accounting Policies-Pension Plans” on page 45 of this Form 10-K. Although Generally Accepted Accounting Principles in the United States of America (GAAP) expense and pension or other postretirement benefit contributions are not directly related, the key economic factors that affect GAAP expense would also likely affect the amount of cash or stock we would contribute to our plans.~~
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.** (32% of words changed)
+
+> We derive a substantial portion of our revenue from the U.S. government, primarily from defense related programs with the ~~United States Department of Defense (U.S. DoD).~~ **U.S. DoD.** Levels of U.S. defense spending are very difficult to predict and may be impacted by numerous factors such as the **evolving nature of the national security threat, U.S. foreign policy, the domestic** political environment, **macroeconomic conditions and the ability of the** U.S. **government to enact relevant legislation such as authorization and appropriations bills.**
+
+**Some of our and our suppliers’ workforces are represented by labor unions, which may lead to work stoppages.** (32% of words changed)
+
+> ~~The majority of our employees have earned benefits under defined benefit pension plans. Potential pension contributions include both mandatory amounts required under the Employee Retirement Income Security Act and discretionary contributions to improve the plans' funded status. The extent of future contributions depends heavily on market factors such as the discount rate and the actual return on plan assets. We estimate future contributions to these plans using assumptions with respect to these and other items. Changes to those assumptions could have a significant effect on future contributions as well as on our annual pension costs and/or result in a significant change to shareholders' equity. For U.S. government contracts, we allocate pension costs to individual contracts based on U.S. Cost Accounting Standards~~ which can also affect contract profitability. We also provide other … see “Management's Discussion and Analysis-Critical Accounting Policies-Pension Plans” on page ~~45~~ **48** of this Form 10-K. Although Generally Accepted Accounting Principles in …
+
+**We conduct a significant portion of our business pursuant to U.S. government contracts, which are subject to unique risks.** (30% of words changed)
+
+> … changes in U.S. national security strategy and/or priorities or other **reasons. Further uncertainty with respect to ongoing programs could also result in the event that the U.S. government finances its operations through temporary funding measures such as “continuing resolutions” rather than full-year appropriations. Any loss or anticipated loss or reduction of expected funding and/or modification, curtailment, or termination of one or more large programs could have a material adverse effect on our earnings, cash flow and/or financial position.**
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.** (29% of words changed)
+
+> ~~Market conditions have a significant impact on demand for our commercial aircraft and related services. The commercial aircraft market is predominantly driven by long-term trends in airline passenger and cargo traffic. The principal factors underlying long-term traffic growth are sustained economic growth and political stability both in developed and emerging markets. Demand for our commercial aircraft is further influenced by airline profitability, availability of aircraft financing, world trade policies, government-to-government relations, technological advances, price and other competitive factors, fuel prices, terrorism, epidemics~~ and environmental regulations. Traditionally, the airline industry has been cyclical … profit swings and constant challenges to be more cost competitive. ~~In addition, availability of financing to non-U.S. customers depends in part on the Export-Import Bank of the United States being fully operational.~~ Significant deterioration in the global economic environment, the airline industry …
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.** (29% of words changed)
+
+> In addition, there continues to be ~~significant~~ uncertainty with respect to future **acquisition priorities and** program-level appropriations for the U.S. DoD and other government agencies (including ~~NASA)~~ **NASA), including tension between modernization and sustainment investments,** within the overall budgetary framework described above. ~~While the House and Senate Appropriations Committees included funding for Boeing’s major programs, such as F/A-18 Super Hornet, CH-47 Chinook, AH-64 Apache, V-22 Osprey, KC-46A Pegasus Tanker and P-8 Poseidon, in their final FY19 defense appropriations, uncertainty remains about how defense budgets in FY20 and beyond will affect Boeing’s programs.~~ Future budget cuts or investment priority changes, including changes associated …
+
+**Unauthorized access to our or our customers’ information and systems could negatively impact our business.** (25% of words changed)
+
+> ~~We are involved in a number of litigation matters. These matters may divert financial and management resources that would otherwise be used to benefit our operations. No assurances can be given that the results of these matters will be favorable to us. An adverse resolution of any of these lawsuits, or future lawsuits, could have a material impact on our financial position and results of operations. In addition, we~~ are subject to extensive regulation under the laws of the …
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.** (22% of words changed)
+
+> ~~Operational challenges impacting the production system for one or more of our commercial aircraft programs could result in production delays and/or failure to meet customer demand for new aircraft, either~~ of which would negatively impact our revenues and operating margins. … performance plans, or delays or failures to achieve required regulatory ~~certifications,~~ **approval, such as the with the 737 MAX,** could result in significant out-of-sequence work and increased production costs, …
+
+**Unauthorized access to our or our customers’ information and systems could negatively impact our business.** (22% of words changed)
+
+> We depend, in part, upon the issuance of debt to fund our operations and contractual commitments. As of December 31, ~~2018~~ **2019** and ~~2017,~~ **2018,** our airplane financing commitments totaled ~~$19,462 million~~ **$13,377** and ~~$10,221 million.~~ **$19,462. In addition, our debt balances increased significantly in 2019, and we expect further increases in 2020, in order to manage liquidity impacts related to the 737 MAX grounding. This has also resulted in downgrades to our credit ratings.** If we require additional funding in order to fund outstanding financing ~~commitments~~ **commitments, address further 737 MAX impacts,** or meet other business requirements, our market liquidity may not … and/or a decline in our financial performance, outlook or credit ~~ratings.~~ **ratings, including impacts related to the 737 MAX grounding** The occurrence of any or all of these events may adversely affect our ability to fund our operations and contractual or financing commitments.
+
+**Our Commercial Airplanes and Global Services businesses depend heavily on commercial airlines, and are subject to unique risks.** (21% of words changed)
+
+> … spending levels and the nature of the threat environment, we **also** expect the U.S. DoD to continue to emphasize ~~cost-cutting~~ **affordability, innovation, cybersecurity,** and ~~other efficiency initiatives~~ **delivery of technical data and software** in its procurement processes. If we can no longer adjust successfully to these changing acquisition ~~priorities and/or fail to meet affordability targets set by the U.S. DoD customer,~~ **policies** our revenues and market share ~~would~~ **could** be ~~further~~ impacted.
+
+**Business disruptions could seriously affect our future sales and financial condition or increase our costs and expenses.** (20% of words changed)
+
+> … Any significant production delays, or any destruction, manipulation or improper **use of our data, information systems or networks could impact our sales, increase our expenses and/or have an adverse effect on the reputation of Boeing and of our products and services.**
+
+**We enter into cost-type contracts which also carry risks.** (14% of words changed)
+
+> Our BDS and BGS defense businesses generated approximately ~~35%~~ **30%** and ~~23%~~ **27%** of their ~~2018~~ **2019** revenues from cost-type contracting arrangements. Some of these are development … profit rates or program cancellation if cost, schedule or technical **performance issues arise. Programs whose contracts are primarily cost-type include Ground-based Midcourse Defense (GMD), Proprietary and SLS programs.**
+
+…and 9 more.

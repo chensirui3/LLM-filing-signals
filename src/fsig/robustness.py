@@ -11,7 +11,9 @@ import math
 import numpy as np
 import pandas as pd
 
-from .backtest import add_forward_returns, information_coefficients, long_short, perf_stats
+from .backtest import (_ic_stats, add_context_returns, add_forward_returns, information_coefficients,
+                       long_short, perf_stats)
+from .extract import load_scores
 from .signals import SIGNALS
 
 LLM_SIGNALS = ["llm_score", "llm_score_chg", "llm_caution"]
@@ -36,6 +38,38 @@ def sensitivity(signals: pd.DataFrame, prices: pd.DataFrame, bt: dict,
         cfg = {**bt, "cost_bps": cost}
         by_cost[f"{cost}_bps"] = {s: perf_stats(long_short(events, prices, s, cfg)["net"])["sharpe"] for s in sig_cols}
     return (pd.DataFrame(by_lag).rename_axis("signal"), pd.DataFrame(by_cost).rename_axis("signal"))
+
+
+def full_text_check(signals: pd.DataFrame, llm: dict, prices: pd.DataFrame, bt: dict) -> tuple[int, pd.DataFrame]:
+    """Does scoring only the first chunks of each MD&A change the result?
+
+    Uses the filings whose whole MD&A has been scored (`extract --all-chunks`)
+    and is longer than the part the signals read. For those filings it compares
+    the signal built from the first llm['max_chunks'] chunks with the same
+    signal built from every chunk: their correlation, and the rank IC of each
+    against returns before the filing and after entry. Returns (number of
+    filings, table).
+    """
+    full = load_scores(llm, "raw", all_chunks=True)
+    full = full[full["n_chunks"] > llm["max_chunks"]].copy()
+    full["llm_score_full"] = full[["tone", "outlook", "demand", "margins"]].mean(axis=1)
+    full["llm_caution_full"] = -(full["liquidity_stress"] + full["uncertainty"])
+    df = signals.merge(full[["accession", "llm_score_full", "llm_caution_full"]], on="accession")
+    df = df.sort_values(["ticker", "filing_date"])
+    df["llm_score_chg_full"] = df.groupby("ticker")["llm_score_full"].diff()
+    df["llm_score_chg"] = df.groupby("ticker")["llm_score"].diff()  # previous filing within this subset
+    horizon = max(bt["horizons"])
+    ev = add_context_returns(add_forward_returns(df, prices, bt), prices, bt)
+    rows = []
+    for s in LLM_SIGNALS:
+        for label, col in (("first chunks", s), ("whole section", f"{s}_full")):
+            before = _ic_stats(ev, col, "abn_before", 4 * bt["quantiles"])
+            after = _ic_stats(ev, col, f"abn_{horizon}", 4 * bt["quantiles"])
+            rows.append({"signal": s, "text_scored": label,
+                         "correlation_with_whole": ev[s].corr(ev[f"{s}_full"]) if label == "first chunks" else 1.0,
+                         "ic_before_filing": before["mean_ic"], "t_before": before["t_stat"],
+                         "ic_after_entry": after["mean_ic"], "t_after": after["t_stat"]})
+    return len(df), pd.DataFrame(rows)
 
 
 def variant_comparison(raw: pd.DataFrame, anon: pd.DataFrame, prices: pd.DataFrame, bt: dict,

@@ -82,6 +82,10 @@ def build_signals(filings: pd.DataFrame, llm: dict, variant: str = "raw", emb: d
         from .embed import embedding_signals
 
         df = df.merge(embedding_signals(filings, emb), on="accession", how="left")
+    if variant != "raw":
+        # Anonymised scoring may cover only part of the universe. Keep the companies it
+        # covers, so that every signal in this table is measured on the same companies.
+        df = df[df["ticker"].isin(df.loc[df["llm_score"].notna(), "ticker"])].reset_index(drop=True)
     df.to_parquet(DATA / f"signals_{variant}.parquet", index=False)
     return df
 

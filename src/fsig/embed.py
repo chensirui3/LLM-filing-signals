@@ -55,15 +55,18 @@ def embed_texts(emb: dict, texts: list[str]) -> np.ndarray:
 def embed_all(filings: pd.DataFrame, emb: dict, section: str = "mdna") -> dict:
     """Embed every parsed section that has no saved embedding yet."""
     todo = [a for a in filings["accession"] if not emb_path(emb["model"], a, section).exists()]
-    stats = {"cached": len(filings) - len(todo), "embedded": 0, "no_text": 0}
+    stats = {"cached": len(filings) - len(todo), "embedded": 0, "no_text": 0, "failed": 0}
 
-    def work(accession: str) -> bool:
+    def work(accession: str) -> bool | None:
         text = load_section(accession, section)
         if not text:
             return False
         chunks = chunk_text(text, emb["chunk_chars"], 10**9)
-        vecs = np.vstack([embed_texts(emb, chunks[i : i + emb["batch"]])
-                          for i in range(0, len(chunks), emb["batch"])])
+        try:
+            vecs = np.vstack([embed_texts(emb, chunks[i : i + emb["batch"]])
+                              for i in range(0, len(chunks), emb["batch"])])
+        except requests.RequestException:
+            return None  # left without a file, so the next run retries it
         path = emb_path(emb["model"], accession, section)
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp.npy")
@@ -73,7 +76,7 @@ def embed_all(filings: pd.DataFrame, emb: dict, section: str = "mdna") -> dict:
 
     with ThreadPoolExecutor(max_workers=emb["workers"]) as pool:
         for ok in tqdm(pool.map(work, todo), total=len(todo), desc=f"embed[{section}]"):
-            stats["embedded" if ok else "no_text"] += 1
+            stats["failed" if ok is None else "embedded" if ok else "no_text"] += 1
     return stats
 
 

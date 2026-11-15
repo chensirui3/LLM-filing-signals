@@ -148,7 +148,7 @@ def validate(resp: dict) -> dict:
 
 def db() -> sqlite3.Connection:
     DATA.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(CACHE)
+    con = sqlite3.connect(CACHE, timeout=300)  # wait rather than fail if another step is writing
     con.execute(
         """CREATE TABLE IF NOT EXISTS chunks(
             key TEXT PRIMARY KEY, accession TEXT, variant TEXT, chunk_idx INTEGER,
@@ -167,7 +167,10 @@ def cache_key(*parts: str) -> str:
 
 # ----------------------------------------------------------------- pipeline
 
-def _tasks(filings: pd.DataFrame, llm: dict, variant: str):
+ALL_CHUNKS = 10**6
+
+
+def _tasks(filings: pd.DataFrame, llm: dict, variant: str, max_chunks: int):
     for r in filings.itertuples():
         text = load_section(r.accession, "mdna")
         if not text:
@@ -175,15 +178,22 @@ def _tasks(filings: pd.DataFrame, llm: dict, variant: str):
         if variant == "anon":
             fy = r.report_date.year if pd.notna(r.report_date) else r.filing_date.year
             text = anonymise(text, r.name, r.ticker, fy)
-        for i, chunk in enumerate(chunk_text(text, llm["chunk_chars"], llm["max_chunks"])):
+        for i, chunk in enumerate(chunk_text(text, llm["chunk_chars"], max_chunks)):
             yield cache_key(llm["model"], PROMPT_VERSION, variant, chunk), r.accession, i, chunk
 
 
-def run_extraction(filings: pd.DataFrame, llm: dict, variant: str = "raw") -> dict:
-    """Score every MD&A chunk not already cached. variant is 'raw' or 'anon'."""
+def run_extraction(filings: pd.DataFrame, llm: dict, variant: str = "raw", all_chunks: bool = False) -> dict:
+    """Score every MD&A chunk not already cached. variant is 'raw' or 'anon'.
+
+    By default only the first llm['max_chunks'] chunks of each MD&A are scored,
+    which is what the signals use. all_chunks scores the whole section, for the
+    truncation check in robustness.full_text_check. A request that fails is
+    counted and left uncached, so running the step again retries it.
+    """
     con = db()
     done = {k for (k,) in con.execute("SELECT key FROM chunks")}
-    todo = [t for t in _tasks(filings, llm, variant) if t[0] not in done]
+    max_chunks = ALL_CHUNKS if all_chunks else llm["max_chunks"]
+    todo = [t for t in _tasks(filings, llm, variant, max_chunks) if t[0] not in done]
     stats = {"cached": len(done), "todo": len(todo), "ok": 0, "failed": 0}
     if not todo:
         return stats
@@ -191,10 +201,10 @@ def run_extraction(filings: pd.DataFrame, llm: dict, variant: str = "raw") -> di
     def work(task):
         key, accession, idx, chunk = task
         user = f"MD&A excerpt:\n\n{chunk}"
-        for _ in range(2):  # one retry on a malformed answer
+        for _ in range(2):  # one retry on a malformed answer or a failed request
             try:
                 return task, validate(ollama_chat(llm, SYSTEM, user, SCHEMA))
-            except (KeyError, ValueError, TypeError):
+            except (KeyError, ValueError, TypeError, requests.RequestException):
                 continue
         return task, None
 
@@ -216,12 +226,16 @@ def run_extraction(filings: pd.DataFrame, llm: dict, variant: str = "raw") -> di
     return stats
 
 
-def load_scores(llm: dict, variant: str = "raw") -> pd.DataFrame:
-    """One row per filing: mean of each field across its chunks."""
+def load_scores(llm: dict, variant: str = "raw", all_chunks: bool = False) -> pd.DataFrame:
+    """One row per filing: mean of each field across its chunks.
+
+    Uses the first llm['max_chunks'] chunks unless all_chunks is set, so scoring
+    further chunks for the truncation check never changes the signals.
+    """
     con = db()
     rows = con.execute(
-        "SELECT accession, response FROM chunks WHERE model=? AND prompt_version=? AND variant=?",
-        (llm["model"], PROMPT_VERSION, variant),
+        "SELECT accession, response FROM chunks WHERE model=? AND prompt_version=? AND variant=? AND chunk_idx<?",
+        (llm["model"], PROMPT_VERSION, variant, ALL_CHUNKS if all_chunks else llm["max_chunks"]),
     ).fetchall()
     if not rows:
         return pd.DataFrame(columns=["accession", *FIELDS, "n_chunks"])

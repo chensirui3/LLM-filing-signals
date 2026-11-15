@@ -1,7 +1,7 @@
 # All experiment parameters are defined in this file, so a run is reproducible
 # from the file and the code.
 
-universe_size: 100          # largest US filers by SEC's market-cap ordering
+universe_size: 500          # largest US filers by SEC's market-cap ordering
 start_date: "2015-01-01"    # first filing date to include
 forms: ["10-K", "10-Q"]
 

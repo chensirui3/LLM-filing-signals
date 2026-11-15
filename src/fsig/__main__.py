@@ -40,6 +40,8 @@ def main() -> None:
     ap.add_argument("--year", type=int, help="riskdiff: filing year of the 10-K (default: latest)")
     ap.add_argument("--no-summary", action="store_true", help="riskdiff: skip the LLM one-line summaries")
     ap.add_argument("--variant", choices=["raw", "anon"], default="raw")
+    ap.add_argument("--all-chunks", action="store_true",
+                    help="extract: score the whole MD&A, not only the first chunks (for the truncation check)")
     ap.add_argument("--size", type=int, help="override universe_size")
     ap.add_argument("--start", help="override start_date (YYYY-MM-DD)")
     ap.add_argument("--quantiles", type=int, help="override backtest.quantiles")
@@ -70,7 +72,7 @@ def main() -> None:
         missing = sorted(set(f["ticker"]) - set(px.columns[px.notna().any()]))
         print(f"prices: {px.shape[0]} days x {px.shape[1]} symbols; no data for: {missing or 'none'}")
     if run("extract"):
-        print(extract.run_extraction(edgar.load_filings(), llm, args.variant))
+        print(extract.run_extraction(edgar.load_filings(), llm, args.variant, args.all_chunks))
     if run("embed"):
         print(embed.embed_all(edgar.load_filings(), cfg["embed"]))
     if run("signals"):
@@ -115,6 +117,18 @@ def main() -> None:
             f"{bt['cost_bps']} bps cost):\n\n" + report._md(by_lag)
             + f"\n\nBy one-way cost (entry lag {bt['entry_lag_days']}):\n\n" + report._md(by_cost))
         print(by_lag.to_string(), "\n", by_cost.to_string())
+        if args.variant == "raw":
+            n_full, full = robustness.full_text_check(sig, llm, px, bt)
+            if n_full:
+                report.save_section(
+                    "all:fulltext", "Robustness: scoring the whole MD&A",
+                    f"The signals read only the first {llm['max_chunks']} chunks of each MD&A. For {n_full:,} "
+                    "filings with a longer MD&A, every chunk was scored as well. The table compares the "
+                    "signal built from the first chunks with the same signal built from the whole section, "
+                    "on those filings: their correlation, and the rank IC of each against the 63-day return "
+                    "before the filing and the return after entry. In this table `llm_score_chg` is the "
+                    "change from the previous filing within this set of filings.\n\n" + report._md(full))
+                print(full.to_string())
         if all((edgar.DATA / f"signals_{v}.parquet").exists() for v in ("raw", "anon")):
             agree, gap_ic = robustness.variant_comparison(
                 signals.load_signals("raw"), signals.load_signals("anon"), px, bt, llm["training_cutoff"])

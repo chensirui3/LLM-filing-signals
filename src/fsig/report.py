@@ -53,7 +53,7 @@ def _md(df: pd.DataFrame, floats: str = "{:.3f}") -> str:
 
 # Sections produced by the leakage and robustness steps, in the order they
 # appear after the backtest results.
-SECTION_ORDER = ("memory", "identity", "variants", "sensitivity")
+SECTION_ORDER = ("memory", "identity", "variants", "fulltext", "sensitivity")
 
 
 def _sections_path():

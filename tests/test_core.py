@@ -292,3 +292,16 @@ def test_factor_alpha_recovers_intercept_and_loading():
     out = factor_alpha(pd.Series(y.to_numpy(), index=months.to_timestamp("M")), factors)
     assert out["months"] == 120 and abs(out["alpha_ann"] - 0.048) < 0.003 and out["t_alpha"] > 10
     assert abs(out["MKT"] - 0.5) < 0.01 and abs(out["SMB"] + 0.2) < 0.01
+
+
+def test_paragraphs_split_by_a_page_break_are_rejoined():
+    from fsig.riskdiff import paragraphs
+
+    start = "Our suppliers may fail to deliver components on time, which " * 3 + "could force us to delay"
+    rest = "shipments to customers and reduce our revenue."
+    listing = "We face several risks in our international operations, including the following " * 2 + "items; and"
+    text = "\n".join([start, "Table of Contents", "47", rest, listing, "• currency fluctuations in the markets we serve",
+                      "A second paragraph that ends properly. " * 5])
+    out = [p["text"] for p in paragraphs(text)]
+    assert out[0] == f"{start} {rest}"                    # page furniture dropped, halves joined
+    assert out[1] == listing and len(out) == 3            # a list lead-in is not joined to its bullets

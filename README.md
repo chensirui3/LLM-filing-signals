@@ -161,7 +161,8 @@ chosen by inspecting matched pairs for NVIDIA. It was then tested on 120
 labelled paragraph pairs from 16 other companies: of the paragraphs the tool
 calls rewritten, 90% are rewrites, and it finds 68% of all rewrites; the rest
 are reported as added. The sample deliberately over-represents hard cases, and
-the labels were assigned by an LLM assistant without a second annotator. See
+the labels were assigned by an LLM assistant and spot-checked by the author,
+without a full second annotation. See
 [reports/riskdiff_validation.md](reports/riskdiff_validation.md); the pairs and
 labels are in `validation/riskdiff_pairs.csv`, and `python -m fsig riskeval`
 rebuilds the report. The LLM summaries may be inaccurate; the quoted filing

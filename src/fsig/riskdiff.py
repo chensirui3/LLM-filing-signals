@@ -53,6 +53,45 @@ SUMMARY_SCHEMA = {"type": "object", "properties": {"summary": {"type": "string"}
 MAX_HEADING_CHARS = 800  # some filers (Boeing, for example) use a full bold paragraph as the heading
 
 
+_SENTENCE_END = re.compile(r"(?:[.!?:;][\"'”’)\]]*|;\s*(?:and|or))$")  # '; and' closes a list item
+MAX_FURNITURE_LINES, MAX_FURNITURE_CHARS = 3, 80
+
+
+def _join_page_breaks(lines: list[tuple[str, str]], is_heading: list[bool]) -> tuple[list[tuple[str, str]], list[bool]]:
+    """Rejoin paragraphs that a page break split in two.
+
+    A body paragraph that stops without sentence-ending punctuation is joined
+    to the next line that starts with a lower-case letter. Up to
+    MAX_FURNITURE_LINES short lines in between (page numbers, running headers
+    such as 'Table of Contents' or the company name) are dropped. Bulleted
+    lines and headings are never joined, so list items stay separate.
+    """
+    out, out_heading, i = [], [], 0
+    while i < len(lines):
+        raw, ln = lines[i]
+        while len(ln) >= MIN_PARA_CHARS and not is_heading[i] and not _SENTENCE_END.search(ln):
+            nxt, skipped = None, 0
+            for k in range(i + 1, len(lines)):
+                cand = lines[k][0]
+                if not cand:
+                    continue
+                if cand[0].islower() and not is_heading[k]:
+                    nxt = k
+                elif cand != lines[k][1]:  # a bulleted line: the paragraph introduces a list
+                    pass
+                elif len(cand) <= MAX_FURNITURE_CHARS and skipped < MAX_FURNITURE_LINES:
+                    skipped += 1
+                    continue
+                break
+            if nxt is None:
+                break
+            ln, i = f"{ln} {lines[nxt][1]}", nxt
+        out.append((raw, ln))
+        out_heading.append(is_heading[i] and ln == lines[i][1])
+        i += 1
+    return out, out_heading
+
+
 def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
     """Body paragraphs, each with the nearest heading above it.
 
@@ -68,6 +107,7 @@ def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
     # Use the formatting only if it marks a plausible share of lines: none means
     # it was not detected, and more than half means the whole section is bold.
     use_format = 0 < sum(marked) <= 0.5 * len(lines)
+    lines, marked = _join_page_breaks(lines, [use_format and m for m in marked])
 
     out, heading = [], ""
     for (_, ln), is_marked in zip(lines, marked):
@@ -258,8 +298,8 @@ def validation_report(table_writer) -> str:
         "**Labels.** Each pair was labelled 1 if the current paragraph restates the specific content of the "
         "previous one (including a condensed or expanded version, or a fragment of it) and 0 if it is new "
         "content, even on the same broad theme. The labels were assigned by an LLM assistant (Claude) reading the "
-        "pairs in random order without the cosine values, and have not been independently checked by a second "
-        f"annotator. {int(pairs['borderline'].sum())} close calls are flagged `borderline` in "
+        "pairs in random order without the cosine values. The author spot-checked a sample of them; they have "
+        f"not been labelled independently by a second annotator. {int(pairs['borderline'].sum())} close calls are flagged `borderline` in "
         "`validation/riskdiff_pairs.csv`.", "",
         f"**Result at the threshold in use ({TOPIC}).** Precision {at['precision']:.0%}, recall "
         f"{at['recall']:.0%}: of the paragraphs the tool calls rewritten, {at['precision']:.0%} are rewrites, and "

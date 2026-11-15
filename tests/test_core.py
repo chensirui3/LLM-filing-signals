@@ -267,3 +267,28 @@ def test_threshold_table_measures_precision_and_recall():
     assert t.loc[0.93, "called_rewritten"] == 3 and np.isclose(t.loc[0.93, "precision"], 2 / 3)
     assert np.isclose(t.loc[0.93, "recall"], 2 / 3) and np.isclose(t.loc[0.90, "recall"], 1.0)
     assert np.isclose(t.loc[0.90, "accuracy"], 0.8)
+
+
+def test_within_industry_portfolio_takes_no_industry_position():
+    days = pd.bdate_range("2024-01-01", "2024-06-28")
+    up = 100 * 1.01 ** np.arange(len(days))
+    px = pd.DataFrame({t: up for t in "ABC"} | {t: 100.0 for t in ["D", "E", "F", "SPY"]}, index=days)
+    sig = pd.DataFrame({"ticker": list("ABCDEF"), "filing_date": pd.Timestamp("2024-01-10"),
+                        "s": [3.0, 2.5, 2.0, -1.0, -1.5, -2.0]})
+    ev = add_forward_returns(sig, px, BT)
+    groups = {"A": "x", "B": "x", "C": "x", "D": "y", "E": "y", "F": "y"}
+    assert (long_short(ev, px, "s", BT)["gross"] > 0).all()                    # long industry x, short industry y
+    assert np.allclose(long_short(ev, px, "s", BT, groups)["gross"], 0)        # ranked against peers: no industry bet
+    assert long_short(ev, px, "s", BT, {"A": "x", "B": "x"}).empty             # too few names with a usable industry
+
+
+def test_factor_alpha_recovers_intercept_and_loading():
+    from fsig.robustness import factor_alpha
+
+    rng = np.random.default_rng(1)
+    months = pd.period_range("2015-01", periods=120, freq="M")
+    factors = pd.DataFrame(rng.normal(0, 0.03, size=(120, 2)), index=months, columns=["MKT", "SMB"])
+    y = 0.004 + 0.5 * factors["MKT"] - 0.2 * factors["SMB"] + rng.normal(0, 0.001, 120)
+    out = factor_alpha(pd.Series(y.to_numpy(), index=months.to_timestamp("M")), factors)
+    assert out["months"] == 120 and abs(out["alpha_ann"] - 0.048) < 0.003 and out["t_alpha"] > 10
+    assert abs(out["MKT"] - 0.5) < 0.01 and abs(out["SMB"] + 0.2) < 0.01

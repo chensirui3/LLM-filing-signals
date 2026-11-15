@@ -45,7 +45,10 @@ reaches |t| = 2 at any horizon. The two similarity signals based on Lazy
 Prices do not reproduce the published effect in this large-cap sample: their
 portfolios lose money, though not significantly (t = -1.4 and -1.8). Varying
 the entry lag (0 to 5 days) or trading costs (0 to 25 bps) does not change any
-conclusion. The smallest rank IC the sample would reliably detect is between
+conclusion. Ranking companies within their industry makes the primary signal
+slightly worse (Sharpe -0.58, t = -2.0), and no signal other than
+`llm_caution` has a significant return after adjusting for the Fama-French
+five factors and momentum. The smallest rank IC the sample would reliably detect is between
 0.02 and 0.04, depending on the signal, so effects of the size usually
 reported for text signals are not ruled out.
 
@@ -58,7 +61,14 @@ loses 4.3% a year (Sharpe -0.83, t = -2.9), and loses most after the cutoff
 (Sharpe -2.17, t = -3.7, 35 months). The loss is spread across nine of the
 twelve years, comes from the 400 smaller companies and not from the 100
 largest (Sharpe -0.19 there), and is not explained by the signal's
-correlation with size or volatility, both close to zero. This signal was not
+correlation with size or volatility, both close to zero. It is not an
+industry effect either: when each company is ranked against others in its
+industry, so that the portfolio takes no position on industries, the result
+is unchanged (Sharpe -0.88, t = -3.0; after the cutoff -2.00, t = -3.4). Nor
+is it exposure to known risk factors: regressed on the Fama-French five
+factors and momentum, the portfolio has small loadings and an unexplained
+return of -4.1% a year (t = -2.8), or -3.6% (t = -2.6) for the
+within-industry version. This signal was not
 the pre-declared one, it is one of six, and it is the signal most affected by
 reading only the first part of each MD&A. It is reported here as an
 observation that would need testing on other data, not as a tradable result.
@@ -218,7 +228,7 @@ ollama pull llama2:7b
 .venv\Scripts\python -m fsig leakage      # memory probe on every installed model, identity probe; added to the reports
 .venv\Scripts\python -m fsig extract --variant anon   # optional: score the anonymised text (takes as long as the first scoring run)
 .venv\Scripts\python -m fsig signals --variant anon
-.venv\Scripts\python -m fsig robustness   # lag and cost sensitivity; raw vs anonymised comparison if both variants exist
+.venv\Scripts\python -m fsig robustness   # lag, cost, industry and factor checks; raw vs anonymised comparison if both variants exist
 .venv\Scripts\python -m pytest
 ```
 
@@ -300,8 +310,13 @@ the downloaded filings.
   score.
 - **Price data.** Prices are Yahoo Finance adjusted closes and have not been
   checked against a second source.
-- **Returns.** Returns are market-adjusted (stock minus SPY), not
-  factor-adjusted. Borrow costs and market impact are not modelled beyond the
+- **Returns.** The rank ICs use market-adjusted returns (stock minus SPY),
+  not factor-adjusted returns. The long-short portfolios are also regressed
+  on the Fama-French five factors and momentum, from Kenneth French's data
+  library, which ended in September 2026 when the reports were built; the
+  regressions after the cutoff have 33 months for seven coefficients.
+  Industries are two-digit SIC groups from each company's current EDGAR
+  classification. Borrow costs and market impact are not modelled beyond the
   flat cost assumption.
 - **Multiple testing.** Six signals at three horizons give eighteen tests. For
   this reason a single primary signal was declared before any results were
@@ -327,7 +342,7 @@ src/fsig/embed.py       chunk embeddings and year-over-year embedding signals
 src/fsig/signals.py     per-filing signal table, Lazy Prices baseline
 src/fsig/backtest.py    forward returns, rank IC, long-short portfolio
 src/fsig/leakage.py     memory and identity probes, memory controls
-src/fsig/robustness.py  lag and cost sensitivity, raw vs anonymised comparison
+src/fsig/robustness.py  lag, cost, industry and factor checks; raw vs anonymised comparison
 src/fsig/riskdiff.py    year-over-year Risk Factors comparison
 src/fsig/report.py      markdown reports and charts
 app.py                  browser front end for the Risk Factors comparison

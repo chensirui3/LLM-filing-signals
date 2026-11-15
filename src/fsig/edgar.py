@@ -107,6 +107,24 @@ def filings_for_cik(client: EdgarClient, cik: int, start_date: str, forms: list[
     ).assign(cik=cik)
 
 
+def sic_code(client: EdgarClient, cik: int) -> str:
+    """The company's four-digit SIC industry code from its submissions file ('' if none)."""
+    name = f"CIK{cik:010d}.json"
+    return str(client.get_json(SUBMISSIONS_URL.format(name=name), RAW / "submissions" / name).get("sic") or "")
+
+
+def industries() -> dict[str, str]:
+    """Ticker -> two-digit SIC major group, for companies that have a SIC code.
+
+    The code is the company's current classification, not its classification
+    at the time of each filing.
+    """
+    uni = pd.read_parquet(UNIVERSE)
+    if "sic" not in uni.columns:
+        return {}
+    return {t: s[:2] for t, s in zip(uni["ticker"], uni["sic"]) if s}
+
+
 def build_universe(client: EdgarClient, size: int, start_date: str, forms: list[str]):
     """Pick the first `size` companies in SEC's ticker file that file 10-Ks.
 
@@ -131,7 +149,7 @@ def build_universe(client: EdgarClient, size: int, start_date: str, forms: list[
         if (f["form"] == "10-K").sum() == 0:  # foreign filers (20-F), funds and similar
             continue
         f = f.assign(ticker=row.ticker, name=row.title)
-        members.append({"cik": cik, "ticker": row.ticker, "name": row.title})
+        members.append({"cik": cik, "ticker": row.ticker, "name": row.title, "sic": sic_code(client, cik)})
         all_filings.append(f)
         bar.update(1)
     bar.close()

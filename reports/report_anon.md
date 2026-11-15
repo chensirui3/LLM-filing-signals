@@ -208,6 +208,54 @@ Rank IC of the gap in `llm_score` against market-adjusted forward returns. If th
 | post_cutoff | 21 | 0.037 | 1.274 | 11 |
 | post_cutoff | 63 | 0.033 | 1.065 | 11 |
 
+## Robustness: industry and factor adjustment
+
+Net Sharpe ratio and t-statistic of each long-short portfolio as reported, and when each company's signal is measured relative to the mean of its industry (two-digit SIC group, 53 groups; industries with fewer than 3 companies at a rebalance are left out). The within-industry portfolio takes no position on industries.
+
+| signal | period | sharpe (as reported) | t (as reported) | sharpe (within industry) | t (within industry) |
+|---|---|---|---|---|---|
+| llm_score | full | 0.285 | 0.979 | 0.032 | 0.108 |
+| llm_score | post_cutoff | 1.052 | 1.797 | 0.640 | 1.094 |
+| llm_score_chg | full | -0.179 | -0.608 | 0.168 | 0.573 |
+| llm_score_chg | post_cutoff | 0.356 | 0.608 | 0.901 | 1.538 |
+| llm_caution | full | -0.483 | -1.662 | -0.172 | -0.588 |
+| llm_caution | post_cutoff | -0.397 | -0.679 | 0.207 | 0.354 |
+| sim_yoy | full | -0.329 | -1.082 | -0.081 | -0.264 |
+| sim_yoy | post_cutoff | -0.278 | -0.474 | 1.093 | 1.867 |
+| emb_sim_yoy | full | -0.545 | -1.794 | -0.266 | -0.871 |
+| emb_sim_yoy | post_cutoff | -0.557 | -0.952 | 0.504 | 0.861 |
+| emb_align_yoy | full | -0.070 | -0.231 | -0.026 | -0.085 |
+| emb_align_yoy | post_cutoff | -0.195 | -0.333 | 0.441 | 0.753 |
+
+Regression of each portfolio's monthly net return on the Fama-French five factors and momentum (Kenneth French's data library). `alpha_ann` is the annualised return the factors do not explain and `t_alpha` its t-statistic; the remaining columns are the factor loadings. The post-cutoff regressions have few months for seven coefficients and are imprecise.
+
+| signal | period | portfolio | months | alpha_ann | t_alpha | MKT | SMB | HML | RMW | CMA | MOM |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| llm_score | full | as reported | 140 | 0.017 | 0.554 | 0.115 | -0.046 | -0.105 | -0.200 | -0.083 | 0.311 |
+| llm_score | full | within industry | 139 | -0.006 | -0.179 | 0.076 | -0.225 | -0.043 | -0.323 | -0.092 | 0.167 |
+| llm_score | post_cutoff | as reported | 33 | 0.070 | 0.965 | 0.288 | -0.326 | -0.124 | -0.477 | 0.318 | 0.067 |
+| llm_score | post_cutoff | within industry | 33 | 0.073 | 0.792 | -0.084 | -0.375 | -0.302 | -0.715 | 0.322 | 0.012 |
+| llm_score_chg | full | as reported | 137 | -0.027 | -0.888 | 0.055 | -0.005 | -0.004 | -0.056 | -0.065 | 0.054 |
+| llm_score_chg | full | within industry | 137 | 0.005 | 0.146 | 0.092 | -0.108 | 0.061 | -0.171 | 0.062 | 0.131 |
+| llm_score_chg | post_cutoff | as reported | 33 | -0.002 | -0.032 | 0.076 | -0.144 | -0.016 | 0.183 | -0.119 | 0.192 |
+| llm_score_chg | post_cutoff | within industry | 33 | 0.053 | 0.692 | 0.159 | -0.143 | 0.032 | 0.073 | -0.344 | 0.287 |
+| llm_caution | full | as reported | 140 | -0.037 | -1.641 | -0.043 | 0.054 | -0.127 | 0.086 | 0.127 | 0.052 |
+| llm_caution | full | within industry | 139 | -0.036 | -1.225 | 0.056 | 0.122 | -0.062 | 0.119 | 0.057 | 0.265 |
+| llm_caution | post_cutoff | as reported | 33 | -0.099 | -1.455 | 0.217 | -0.452 | 0.347 | 0.039 | -0.048 | -0.238 |
+| llm_caution | post_cutoff | within industry | 33 | -0.057 | -0.558 | 0.215 | -0.064 | 0.358 | 0.083 | 0.088 | 0.349 |
+| sim_yoy | full | as reported | 128 | -0.023 | -0.542 | -0.220 | 0.055 | 0.232 | 0.283 | -0.031 | -0.305 |
+| sim_yoy | full | within industry | 127 | 0.000 | 0.013 | -0.076 | -0.071 | -0.076 | -0.004 | 0.413 | -0.065 |
+| sim_yoy | post_cutoff | as reported | 33 | 0.156 | 1.211 | -0.811 | 0.325 | -0.385 | 0.666 | -0.272 | -0.476 |
+| sim_yoy | post_cutoff | within industry | 33 | 0.236 | 2.282 | -0.117 | -0.062 | -0.592 | 0.146 | 0.250 | -0.170 |
+| emb_sim_yoy | full | as reported | 128 | -0.046 | -1.172 | -0.226 | 0.064 | 0.260 | 0.194 | 0.013 | -0.271 |
+| emb_sim_yoy | full | within industry | 127 | -0.030 | -0.757 | 0.032 | -0.145 | -0.006 | -0.035 | 0.138 | -0.034 |
+| emb_sim_yoy | post_cutoff | as reported | 33 | 0.110 | 1.078 | -0.808 | 0.549 | -0.345 | 0.570 | -0.196 | -0.338 |
+| emb_sim_yoy | post_cutoff | within industry | 33 | 0.113 | 0.948 | 0.312 | -0.259 | -0.608 | 0.119 | 0.440 | -0.166 |
+| emb_align_yoy | full | as reported | 128 | -0.005 | -0.151 | -0.088 | 0.027 | -0.128 | 0.200 | -0.162 | -0.085 |
+| emb_align_yoy | full | within industry | 127 | 0.001 | 0.033 | 0.017 | -0.214 | -0.040 | -0.198 | 0.123 | -0.158 |
+| emb_align_yoy | post_cutoff | as reported | 33 | 0.088 | 0.881 | -0.421 | 0.191 | -0.896 | 0.499 | -0.470 | -0.292 |
+| emb_align_yoy | post_cutoff | within industry | 33 | 0.127 | 1.461 | -0.081 | -0.547 | -0.746 | -0.314 | 0.339 | -0.522 |
+
 ## Robustness: scoring the whole MD&A
 
 The signals read only the first 3 chunks of each MD&A. For 3,559 filings with a longer MD&A, every chunk was scored as well. The table compares the signal built from the first chunks with the same signal built from the whole section, on those filings: their correlation, and the rank IC of each against the 63-day return before the filing and the return after entry. In this table `llm_score_chg` is the change from the previous filing within this set of filings.

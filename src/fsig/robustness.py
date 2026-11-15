@@ -1,6 +1,9 @@
 """Sensitivity of the headline results to methodological choices.
 
 sensitivity         long-short Sharpe ratio for other entry lags and cost levels
+adjusted_returns    the same portfolios ranked within industry, and their
+                    alpha against the Fama-French factors and momentum
+full_text_check     signals from the first chunks versus the whole MD&A
 variant_comparison  raw versus anonymised LLM scores for the same filing, and
                     whether the difference between them predicts returns
 """
@@ -38,6 +41,60 @@ def sensitivity(signals: pd.DataFrame, prices: pd.DataFrame, bt: dict,
         cfg = {**bt, "cost_bps": cost}
         by_cost[f"{cost}_bps"] = {s: perf_stats(long_short(events, prices, s, cfg)["net"])["sharpe"] for s in sig_cols}
     return (pd.DataFrame(by_lag).rename_axis("signal"), pd.DataFrame(by_cost).rename_axis("signal"))
+
+
+def factor_alpha(monthly: pd.Series, factors: pd.DataFrame) -> dict:
+    """Regress monthly long-short returns on factor returns (ordinary least squares).
+
+    Returns the annualised intercept (alpha), its t-statistic, the number of
+    months and the factor loadings. The portfolio is self-financing, so its
+    return is used as it is, without subtracting the risk-free rate.
+    """
+    y = monthly.dropna()
+    y.index = y.index.to_period("M")
+    df = factors.join(y.rename("y"), how="inner").dropna()
+    n, k = len(df), factors.shape[1] + 1
+    if n < 2 * k:
+        return {"months": n, "alpha_ann": np.nan, "t_alpha": np.nan, **{c: np.nan for c in factors.columns}}
+    x = np.column_stack([np.ones(n), df[factors.columns].to_numpy()])
+    beta, *_ = np.linalg.lstsq(x, df["y"].to_numpy(), rcond=None)
+    resid = df["y"].to_numpy() - x @ beta
+    se = np.sqrt(np.diag(resid @ resid / (n - k) * np.linalg.inv(x.T @ x)))
+    return {"months": n, "alpha_ann": beta[0] * 12, "t_alpha": beta[0] / se[0],
+            **dict(zip(factors.columns, beta[1:]))}
+
+
+def adjusted_returns(signals: pd.DataFrame, prices: pd.DataFrame, bt: dict, cutoff: str,
+                     groups: dict[str, str], factors: pd.DataFrame | None) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+    """Do the long-short results survive controls for industry and for known factors?
+
+    Returns (industry, alpha).
+
+    industry: net Sharpe ratio and t-statistic of each portfolio as reported,
+    and when companies are ranked within their industry (two-digit SIC group).
+
+    alpha: the part of each portfolio's return that the Fama-French five
+    factors and momentum do not explain, for the as-reported and the
+    within-industry portfolio. None if the factor table is not available.
+    """
+    c = pd.Timestamp(cutoff)
+    sig_cols = [s for s in SIGNALS if s in signals.columns and signals[s].notna().any()]
+    events = add_forward_returns(signals, prices, bt)
+    ind_rows, alpha_rows = [], []
+    for s in sig_cols:
+        series = {"as reported": long_short(events, prices, s, bt)["net"],
+                  "within industry": long_short(events, prices, s, bt, groups)["net"]}
+        for period, pick in (("full", lambda r: r), ("post_cutoff", lambda r: r[r.index > c])):
+            row = {"signal": s, "period": period}
+            for name, r in series.items():
+                st = perf_stats(pick(r))
+                row[f"sharpe ({name})"], row[f"t ({name})"] = st["sharpe"], st["t_stat"]
+            ind_rows.append(row)
+            if factors is not None:
+                for name, r in series.items():
+                    alpha_rows.append({"signal": s, "period": period, "portfolio": name,
+                                       **factor_alpha(pick(r), factors)})
+    return pd.DataFrame(ind_rows), (pd.DataFrame(alpha_rows) if alpha_rows else None)
 
 
 def full_text_check(signals: pd.DataFrame, llm: dict, prices: pd.DataFrame, bt: dict) -> tuple[int, pd.DataFrame]:

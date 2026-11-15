@@ -153,12 +153,22 @@ def _leg_return(w: pd.Series, ret: pd.Series) -> float:
     return float((w[ok] * ret[ok]).sum() / w[ok].sum()) if ok.any() else 0.0
 
 
-def long_short(events: pd.DataFrame, prices: pd.DataFrame, signal: str, bt: dict) -> pd.DataFrame:
+MIN_GROUP = 3  # companies an industry needs at a rebalance to be used in a group-neutral portfolio
+
+
+def long_short(events: pd.DataFrame, prices: pd.DataFrame, signal: str, bt: dict,
+               groups: dict[str, str] | None = None) -> pd.DataFrame:
     """Monthly-rebalanced, equal-weighted top-minus-bottom quantile portfolio.
 
     At each month-end t every company carries the signal from its latest filing
     whose entry date is <= t and which is younger than max_signal_age_days.
     Positions are held to the next month-end. Costs are charged on turnover.
+
+    With `groups` (ticker -> industry), each company's signal is measured
+    relative to the mean of its industry at that month-end, so the portfolio
+    ranks companies against their peers and takes no position on industries.
+    Companies with no industry, or in an industry with fewer than MIN_GROUP
+    live names, are left out.
     """
     q, max_age = bt["quantiles"], pd.Timedelta(days=bt["max_signal_age_days"])
     cost_rate = bt["cost_bps"] / 1e4
@@ -171,6 +181,10 @@ def long_short(events: pd.DataFrame, prices: pd.DataFrame, signal: str, bt: dict
         live = ev[(ev["entry_date"] <= t) & (ev["filing_date"] >= t - max_age)]
         s = live.groupby("ticker")[signal].last().sort_index()
         s = s[prices.loc[t, s.index].notna().to_numpy()]
+        if groups is not None:
+            g = pd.Series(s.index.map(groups.get), index=s.index).dropna()
+            by_group = s[g.index].groupby(g)
+            s = (s[g.index] - by_group.transform("mean"))[by_group.transform("size") >= MIN_GROUP]
         if len(s) < 2 * q:
             prev_w = pd.Series(dtype=float)
             continue

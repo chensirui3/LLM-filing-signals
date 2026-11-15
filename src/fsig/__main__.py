@@ -21,7 +21,7 @@ import argparse
 
 import pandas as pd
 
-from . import edgar, embed, extract, leakage, prices, report, riskdiff, robustness, sections, signals
+from . import backtest, edgar, embed, extract, leakage, prices, report, riskdiff, robustness, sections, signals
 from .config import load_config
 
 
@@ -117,6 +117,26 @@ def main() -> None:
             f"{bt['cost_bps']} bps cost):\n\n" + report._md(by_lag)
             + f"\n\nBy one-way cost (entry lag {bt['entry_lag_days']}):\n\n" + report._md(by_cost))
         print(by_lag.to_string(), "\n", by_cost.to_string())
+        groups = edgar.industries()
+        if groups:
+            factors = prices.get_factors()
+            if factors is None:
+                print("factor data could not be downloaded; the factor regression is skipped")
+            by_ind, alpha = robustness.adjusted_returns(sig, px, bt, llm["training_cutoff"], groups, factors)
+            text = ("Net Sharpe ratio and t-statistic of each long-short portfolio as reported, and when each "
+                    "company's signal is measured relative to the mean of its industry (two-digit SIC group, "
+                    f"{len(set(groups.values()))} groups; industries with fewer than {backtest.MIN_GROUP} companies "
+                    "at a rebalance are left out). The within-industry portfolio takes no position on "
+                    "industries.\n\n" + report._md(by_ind))
+            if alpha is not None:
+                text += ("\n\nRegression of each portfolio's monthly net return on the Fama-French five factors "
+                         "and momentum (Kenneth French's data library). `alpha_ann` is the annualised return "
+                         "the factors do not explain and `t_alpha` its t-statistic; the remaining columns are "
+                         "the factor loadings. The post-cutoff regressions have few months for seven "
+                         "coefficients and are imprecise.\n\n" + report._md(alpha))
+            report.save_section(f"{args.variant}:adjusted", "Robustness: industry"
+                                + (" and factor adjustment" if alpha is not None else " adjustment"), text)
+            print(by_ind.to_string(), "\n", "" if alpha is None else alpha.to_string())
         if args.variant == "raw":
             n_full, full = robustness.full_text_check(sig, llm, px, bt)
             if n_full:

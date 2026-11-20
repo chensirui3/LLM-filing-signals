@@ -15,6 +15,9 @@ data/*
 !data/signals_anon.parquet
 !data/llm_cache.sqlite
 
+# Partly written demo files left by an interrupted `python -m fsig demo`
+docs/data/*.tmp
+
 # Trial runs made with FSIG_HOME
 quickstart/
 

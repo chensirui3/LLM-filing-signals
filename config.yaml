@@ -43,3 +43,7 @@ embed:
   chunk_chars: 1500
   batch: 32
   workers: 2
+
+demo:                         # precomputed Risk Factors comparisons for docs/index.html
+  companies: 100              # the largest companies in the universe, every filing year
+  max_items: 12               # paragraphs kept per section of each comparison

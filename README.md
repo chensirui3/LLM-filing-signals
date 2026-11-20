@@ -11,6 +11,11 @@ Management's Discussion and Analysis (MD&A) section with a local model
 (Llama 3.1 8B through Ollama), and evaluates the scores with a point-in-time
 backtest. It runs on a single machine and uses only free data.
 
+The project also includes a tool that reports what changed in a company's
+Risk Factors from one 10-K to the next. A
+[live demo](https://chensirui3.github.io/LLM-filing-signals/) runs in the
+browser with nothing to install.
+
 ## Look-ahead bias in LLM backtests
 
 A language model trained on text up to December 2023 has been exposed to news
@@ -137,19 +142,35 @@ unchanged, edited (shown as a word-level diff), rewritten, added or removed.
 The local LLM writes a one-line summary of each added and removed risk. Each
 paragraph is shown under its risk-factor heading; headings are recognised by
 their bold or italic formatting in the filing, because many are full sentences
-as long as a short paragraph. Examples:
+as long as a short paragraph. Paragraphs split by a page break are rejoined,
+and sections whose text is hard-wrapped into short lines are reflowed into
+paragraphs. Examples:
 
-- [NVIDIA, 10-K filed February 2023](reports/riskdiff_NVDA_2023.md): the new
-  US export licence requirements for China and the transfer of operations out
-  of China appear as added risks.
-- [Boeing, 10-K filed January 2020](reports/riskdiff_BA_2020.md): the 737 MAX
-  grounding and production suspension appear as added risks.
-- [Meta, 10-K filed February 2022](reports/riskdiff_META_2022.md): the
+- [NVIDIA, 10-K filed February 2023](reports/riskdiff_NVDA_2023.md)
+  ([demo](https://chensirui3.github.io/LLM-filing-signals/#NVDA/2023)): the
+  new US export licence requirements for China and the transfer of operations
+  out of China appear as added risks.
+- [Boeing, 10-K filed January 2020](reports/riskdiff_BA_2020.md)
+  ([demo](https://chensirui3.github.io/LLM-filing-signals/#BA/2020)): the
+  737 MAX grounding and production suspension appear as added risks.
+- [Meta, 10-K filed February 2022](reports/riskdiff_META_2022.md)
+  ([demo](https://chensirui3.github.io/LLM-filing-signals/#META/2022)): the
   metaverse strategy and blockchain-based payment initiatives appear as added
   risks.
 
-A browser front end lets you pick any company and year in the universe. It
-needs the downloaded filings and a running Ollama server:
+The [live demo](https://chensirui3.github.io/LLM-filing-signals/) covers 97 of
+the 100 largest companies in the universe: each of their 10-Ks filed from 2016
+to 2026 is compared with the one before it, 947 comparisons in all. General
+Electric, Wells Fargo and Citigroup are missing because the parser does not
+find a Risk Factors section in their 10-Ks. The comparisons were computed in
+advance by `python -m fsig demo`, which took about an hour and a half on one
+RTX 4090 and writes them to `docs/data/` (21 MB). The page, `docs/index.html`,
+only displays them, so GitHub Pages serves it without any server-side code. A
+link to a particular comparison ends in its ticker and year, for example
+`#NVDA/2023`.
+
+The Streamlit front end compares any company and year in the universe on
+demand. It needs the downloaded filings and a running Ollama server:
 
 ```powershell
 .venv\Scripts\python -m pip install -e .[app]
@@ -230,6 +251,7 @@ ollama pull llama2:7b
 .venv\Scripts\python -m fsig extract --variant anon   # optional: score the anonymised text (takes as long as the first scoring run)
 .venv\Scripts\python -m fsig signals --variant anon
 .venv\Scripts\python -m fsig robustness   # lag, cost, industry and factor checks; raw vs anonymised comparison if both variants exist
+.venv\Scripts\python -m fsig demo         # optional: precompute the Risk Factors comparisons shown by the demo page in docs/
 .venv\Scripts\python -m pytest
 ```
 
@@ -287,7 +309,10 @@ the downloaded filings.
   capitalisation, so the sample is tilted towards past winners and excludes
   delisted firms. A long-short portfolio offsets this only in part. Removing
   the bias requires point-in-time index membership and delisting returns (for
-  example from CRSP), which are not freely available.
+  example from CRSP), which are not freely available. Companies are also
+  identified by their current SEC registrant: the ticker XOM now belongs to a
+  newly registered ExxonMobil holding company with no 10-K filings, so
+  ExxonMobil is not in the universe.
 - **Limited power.** With 500 companies and about 45 quarters, the smallest
   rank IC the study would detect with 80% power is 0.02 to 0.04. A smaller
   real effect would not be found. The post-cutoff period is under three years
@@ -347,6 +372,7 @@ src/fsig/robustness.py  lag, cost, industry and factor checks; raw vs anonymised
 src/fsig/riskdiff.py    year-over-year Risk Factors comparison
 src/fsig/report.py      markdown reports and charts
 app.py                  browser front end for the Risk Factors comparison
+docs/                   static demo page and its precomputed comparisons, served by GitHub Pages
 validation/             labelled paragraph pairs for the comparison threshold
 tests/                  unit tests for parsing, timing, signals and probes
 reports/                generated reports, charts and example comparisons

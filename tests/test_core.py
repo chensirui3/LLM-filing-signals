@@ -305,3 +305,52 @@ def test_paragraphs_split_by_a_page_break_are_rejoined():
     out = [p["text"] for p in paragraphs(text)]
     assert out[0] == f"{start} {rest}"                    # page furniture dropped, halves joined
     assert out[1] == listing and len(out) == 3            # a list lead-in is not joined to its bullets
+
+
+def test_demo_export_writes_resumable_comparisons(tmp_path, monkeypatch):
+    import json
+
+    from fsig import riskdiff
+
+    base = "We depend on a small number of suppliers for key components and any disruption could delay shipments. " * 2
+    cyber = "A breach of our information systems could expose customer data and lead to regulatory fines, litigation and reputational damage. " * 2
+    export = "New export licensing requirements restrict sales of our fastest processors to certain countries. " * 2
+    edited = cyber.replace("regulatory fines", "large regulatory fines and penalties")
+    texts = {"a1": [base, cyber], "a2": [base, edited, export], "a3": [base, edited, export]}
+    topic = lambda t: 0 if "suppliers" in t else 1 if "breach" in t else 2
+    monkeypatch.setattr(riskdiff, "DEMO", tmp_path)
+    monkeypatch.setattr(riskdiff, "load_section", lambda accession, name: "text")
+    monkeypatch.setattr(riskdiff, "load_paragraphs",
+                        lambda cik, accession: [{"heading": "Risks", "text": t} for t in texts[accession]])
+    monkeypatch.setattr(riskdiff, "_embed", lambda emb, ts: np.eye(3, dtype=np.float32)[[topic(t) for t in ts]])
+    filings = pd.DataFrame({"ticker": "AAA", "name": "Alpha Corp", "form": "10-K", "cik": 1, "primary_doc": "a.htm",
+                            "accession": ["a1", "a2", "a3"],
+                            "filing_date": pd.to_datetime(["2021-02-01", "2022-02-01", "2023-02-01"])})
+
+    assert riskdiff.export_demo(filings, ["AAA", "BBB"], {"model": "test"}, None) == {"computed": 2, "kept": 0, "failed": 0}
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    assert index["companies"] == [{"ticker": "AAA", "name": "Alpha Corp", "years": [2022, 2023]}]
+    assert index["selected"] == 2 and index["missing"] == [{"ticker": "BBB", "name": ""}]  # no 10-Ks to compare
+    data = json.loads((tmp_path / "AAA.json").read_text(encoding="utf-8"))
+    c = data["2022"]
+    assert c["counts"] == {"unchanged": 1, "edited": 1, "rewritten": 0, "added": 1, "removed": 0}
+    assert c["added"][0]["text"].startswith("New export") and ["+", "large"] in c["edited"][0]["diff"]
+    assert data["2023"]["counts"]["unchanged"] == 3
+    assert "| added | 1 |" in riskdiff.to_markdown(c)                       # the report is built from the same data
+    assert riskdiff.export_demo(filings, ["AAA"], {"model": "test"}, None)["kept"] == 2   # a second run resumes
+
+
+def test_hard_wrapped_risk_factors_are_reflowed():
+    from fsig.riskdiff import paragraphs
+
+    supply = ["Our suppliers may fail to deliver components on time, which could force",
+              "us to delay shipments to customers and reduce our revenue in the affected",
+              "quarters. Shortages of key parts have occurred in the past and may recur",
+              "in the future."]
+    cyber = ["A breach of our information systems could expose customer data and lead",
+             "to regulatory fines, litigation and damage to our reputation with users",
+             "and partners."]
+    text = "\n".join(["Risks related to our supply chain", *supply, "Risks related to cybersecurity", *cyber])
+    assert paragraphs(text) == [  # every line is short, so the lines are joined back into paragraphs
+        {"heading": "Risks related to our supply chain", "text": " ".join(supply)},
+        {"heading": "Risks related to cybersecurity", "text": " ".join(cyber)}]

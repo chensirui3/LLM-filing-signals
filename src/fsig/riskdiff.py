@@ -15,21 +15,29 @@ the wording is retained:
 
 A local LLM then writes a one-line summary of each added and removed risk.
 All output is derived from the two filings alone.
+
+compare_filings returns a comparison as plain data; to_markdown formats it as
+a report, and export_demo precomputes comparisons for the static demo page in
+docs/.
 """
 from __future__ import annotations
 
 import gzip
+import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date
 from difflib import SequenceMatcher
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
-from .config import REPORTS, ROOT
+from .config import HOME, REPORTS, ROOT
 from .embed import embed_texts
 from .extract import ollama_chat
-from .edgar import filing_path
+from .edgar import ARCHIVE_URL, filing_path
 from .sections import emphasised_lines, load_section
 
 MIN_PARA_CHARS = 150   # shorter lines are headings, summary bullets, or page headers and footers
@@ -92,6 +100,47 @@ def _join_page_breaks(lines: list[tuple[str, str]], is_heading: list[bool]) -> t
     return out, out_heading
 
 
+def _reflow(lines: list[tuple[str, str]], is_heading: list[bool]) -> tuple[list[tuple[str, str]], list[bool]]:
+    """Rebuild the paragraphs of a hard-wrapped section, in which every line is short.
+
+    Lines are joined until one ends a sentence well short of the wrap width
+    (estimated as the 90th percentile of line lengths), which marks the end
+    of a paragraph. A new paragraph also starts at a blank or bulleted line,
+    where heading formatting starts or stops, and after a short line without
+    final punctuation that is followed by a capitalised line (a heading).
+    """
+    lengths = sorted(len(ln) for _, ln in lines if ln)
+    if not lengths:
+        return lines, is_heading
+    width = lengths[int(0.9 * (len(lengths) - 1))]
+    out, out_heading, raw_buf, buf = [], [], [], []
+    buf_heading = False
+
+    def flush() -> None:
+        if buf:
+            out.append((" ".join(raw_buf), " ".join(buf)))
+            out_heading.append(buf_heading)
+        raw_buf.clear()
+        buf.clear()
+
+    for (raw, ln), heading in zip(lines, is_heading):
+        if not ln:
+            flush()
+            continue
+        if buf:
+            prev = buf[-1]
+            if (heading != buf_heading or raw != ln
+                    or (_SENTENCE_END.search(prev) and len(prev) < 0.85 * width)
+                    or (not re.search(r"[.!?:;,]$", prev) and len(prev) < 0.6 * width and ln[0].isupper())):
+                flush()
+        if not buf:
+            buf_heading = heading
+        raw_buf.append(raw)
+        buf.append(ln)
+    flush()
+    return out, out_heading
+
+
 def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
     """Body paragraphs, each with the nearest heading above it.
 
@@ -107,7 +156,10 @@ def paragraphs(text: str, emphasised: set[str] | None = None) -> list[dict]:
     # Use the formatting only if it marks a plausible share of lines: none means
     # it was not detected, and more than half means the whole section is bold.
     use_format = 0 < sum(marked) <= 0.5 * len(lines)
-    lines, marked = _join_page_breaks(lines, [use_format and m for m in marked])
+    marked = [use_format and m for m in marked]
+    if max((len(ln) for _, ln in lines), default=0) < MIN_PARA_CHARS:
+        lines, marked = _reflow(lines, marked)  # hard-wrapped: no line is long enough to be a paragraph
+    lines, marked = _join_page_breaks(lines, marked)
 
     out, heading = [], ""
     for (_, ln), is_marked in zip(lines, marked):
@@ -157,11 +209,15 @@ def classify(old: list[str], new: list[str], old_vecs: np.ndarray, new_vecs: np.
     return new_rows, removed
 
 
-def inline_diff(a: str, b: str, context: int = 10) -> str:
-    """Word diff as markdown: ~~removed~~ **added**, with unchanged runs shortened."""
+def diff_segments(a: str, b: str, context: int = 10) -> list[list[str]]:
+    """Word diff from a to b as [op, text] pairs: '=' unchanged, '-' removed, '+' added.
+
+    Unchanged runs longer than 2 * context + 3 words keep `context` words on
+    each side of a '…' (one side only at the start or end of the paragraph).
+    """
     wa, wb = _WORDS.findall(a), _WORDS.findall(b)
     ops = SequenceMatcher(None, wa, wb, autojunk=False).get_opcodes()
-    parts = []
+    out = []
     for n, (op, i1, i2, j1, j2) in enumerate(ops):
         if op == "equal":
             run = wa[i1:i2]
@@ -169,13 +225,25 @@ def inline_diff(a: str, b: str, context: int = 10) -> str:
                 head = [] if n == 0 else run[:context]
                 tail = [] if n == len(ops) - 1 else run[-context:]
                 run = head + ["…"] + tail
-            parts.append(" ".join(run))
+            out.append(["=", " ".join(run)])
         else:
             if i2 > i1:
-                parts.append("~~" + " ".join(wa[i1:i2]) + "~~")
+                out.append(["-", " ".join(wa[i1:i2])])
             if j2 > j1:
-                parts.append("**" + " ".join(wb[j1:j2]) + "**")
-    return " ".join(p for p in parts if p)
+                out.append(["+", " ".join(wb[j1:j2])])
+    return [s for s in out if s[1]]
+
+
+_DIFF_MARK = {"=": "{}", "-": "~~{}~~", "+": "**{}**"}
+
+
+def _diff_markdown(segments: list[list[str]]) -> str:
+    return " ".join(_DIFF_MARK[op].format(text) for op, text in segments)
+
+
+def inline_diff(a: str, b: str, context: int = 10) -> str:
+    """Word diff as markdown: ~~removed~~ **added**, with unchanged runs shortened."""
+    return _diff_markdown(diff_segments(a, b, context))
 
 
 def _embed(emb: dict, texts: list[str]) -> np.ndarray:
@@ -340,15 +408,45 @@ def available(filings: pd.DataFrame) -> dict[str, list[int]]:
     return {t: y for t, y in years.items() if y}
 
 
-def render(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, llm: dict | None,
-           max_items: int = 12) -> tuple[str, str]:
-    """Compare a 10-K's Risk Factors with the previous year's. Returns (report name, markdown)."""
-    prev, cur = pick_filings(filings, ticker, year)
-    old_p, new_p = (load_paragraphs(r.cik, r.accession) for r in (prev, cur))
-    old, new = [p["text"] for p in old_p], [p["text"] for p in new_p]
-    rows, removed = classify(old, new, _embed(emb, old), _embed(emb, new))
+# ----------------------------------------------------------------- comparison
 
-    by = {s: [r for r in rows if r["status"] == s] for s in ("unchanged", "edited", "rewritten", "added")}
+STATUSES = ("unchanged", "edited", "rewritten", "added")
+
+
+def _filing_meta(row) -> dict:
+    return {"date": f"{row.filing_date:%Y-%m-%d}", "accession": row.accession,
+            "url": ARCHIVE_URL.format(cik=row.cik, acc=row.accession.replace("-", ""), doc=row.primary_doc)}
+
+
+def _prepared(row, emb: dict, cache: dict | None) -> tuple[list[dict], np.ndarray]:
+    """A filing's Risk Factors paragraphs and their embeddings, reused from `cache` if present."""
+    if cache is not None and row.accession in cache:
+        return cache[row.accession]
+    paras = load_paragraphs(row.cik, row.accession)
+    out = (paras, _embed(emb, [p["text"] for p in paras]) if paras else np.zeros((0, 0)))
+    if cache is not None:
+        cache[row.accession] = out
+    return out
+
+
+def compare_filings(prev, cur, emb: dict, llm: dict | None, max_items: int = 12,
+                    cache: dict | None = None) -> dict:
+    """Compare the Risk Factors of two 10-K filings (rows of the filing index).
+
+    Returns plain data: paragraph counts and shares of the current text by
+    status, and up to `max_items` paragraphs of each kind, with one-line
+    summaries of the added and removed ones if `llm` is given. `cache` (a
+    dict) keeps each filing's paragraphs and embeddings, so a filing compared
+    twice is read and embedded once.
+    """
+    old_p, old_vecs = _prepared(prev, emb, cache)
+    new_p, new_vecs = _prepared(cur, emb, cache)
+    if not old_p or not new_p:
+        raise ValueError(f"no Risk Factors paragraphs found in {(cur if old_p else prev).accession}")
+    old, new = [p["text"] for p in old_p], [p["text"] for p in new_p]
+    rows, removed = classify(old, new, old_vecs, new_vecs)
+
+    by = {s: [r for r in rows if r["status"] == s] for s in STATUSES}
     # Least similar to the other filing first, with full paragraphs ranked above one-line list items.
     by["added"].sort(key=lambda r: -(1 - r["cos"]) * min(len(new[r["new"]]), 600))
     removed.sort(key=lambda r: -(1 - r["cos"]) * min(len(old[r["old"]]), 600))
@@ -357,55 +455,154 @@ def render(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, llm:
     notes = _summaries(llm, [new[r["new"]] for r in added] + [old[r["old"]] for r in gone]) if llm else []
     notes += [""] * (len(added) + len(gone) - len(notes))
 
-    chars = lambda rs, src, key: sum(len(src[r[key]]) for r in rs)
     total = sum(map(len, new)) or 1
-    out = [f"# {cur['name']} ({cur.ticker}): changes in Risk Factors",
+    return {
+        "ticker": cur.ticker, "name": cur["name"],
+        "previous": _filing_meta(prev), "current": _filing_meta(cur),
+        "paragraphs": {"previous": len(old), "current": len(new)},
+        "counts": {s: len(by[s]) for s in STATUSES} | {"removed": len(removed)},
+        "share": {s: sum(len(new[r["new"]]) for r in by[s]) / total for s in STATUSES},
+        "embed_model": emb["model"], "llm_model": llm["model"] if llm else None,
+        "added": [{"heading": new_p[r["new"]]["heading"], "summary": note, "text": _excerpt(new[r["new"]])}
+                  for r, note in zip(added, notes[: len(added)])],
+        "removed": [{"heading": old_p[r["old"]]["heading"], "summary": note, "text": _excerpt(old[r["old"]])}
+                    for r, note in zip(gone, notes[len(added):])],
+        "rewritten": [{"heading": new_p[r["new"]]["heading"], "previous": _excerpt(old[r["old"]], 400),
+                       "current": _excerpt(new[r["new"]], 400)}
+                      for r in sorted(by["rewritten"], key=lambda r: r["ratio"])[:max_items]],
+        "edited": [{"heading": new_p[r["new"]]["heading"], "changed": 1 - r["ratio"],
+                    "diff": diff_segments(old[r["old"]], new[r["new"]])}
+                   for r in by["edited"][:max_items]],
+    }
+
+
+def compare(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, llm: dict | None,
+            max_items: int = 12) -> dict:
+    """Compare a company's 10-K filed in `year` (default: the latest) with the one before it."""
+    prev, cur = pick_filings(filings, ticker, year)
+    return compare_filings(prev, cur, emb, llm, max_items)
+
+
+def to_markdown(c: dict) -> str:
+    """A comparison from compare_filings as a markdown report."""
+    counts = c["counts"]
+    out = [f"# {c['name']} ({c['ticker']}): changes in Risk Factors",
            "",
-           f"10-K filed {cur.filing_date:%Y-%m-%d} compared with the 10-K filed {prev.filing_date:%Y-%m-%d}. "
-           f"Paragraphs compared: {len(old)} in the previous filing, {len(new)} in the current filing.",
+           f"10-K filed {c['current']['date']} compared with the 10-K filed {c['previous']['date']}. "
+           f"Paragraphs compared: {c['paragraphs']['previous']} in the previous filing, "
+           f"{c['paragraphs']['current']} in the current filing.",
            "",
            "| Status | Paragraphs | Share of current text |",
            "|---|---|---|"]
-    for s in ("unchanged", "edited", "rewritten", "added"):
-        out.append(f"| {s} | {len(by[s])} | {chars(by[s], new, 'new') / total:.0%} |")
-    note = f"Paragraphs are matched by embedding similarity ({emb['model']})."
-    if llm:
-        note += (f" The one-line summaries are generated by {llm['model']} and may be inaccurate; "
+    for s in STATUSES:
+        out.append(f"| {s} | {counts[s]} | {c['share'][s]:.0%} |")
+    note = f"Paragraphs are matched by embedding similarity ({c['embed_model']})."
+    if c["llm_model"]:
+        note += (f" The one-line summaries are generated by {c['llm_model']} and may be inaccurate; "
                  "the quoted filing text is authoritative.")
-    out += [f"| removed (from the previous filing) | {len(removed)} | |", "", note, ""]
+    out += [f"| removed (from the previous filing) | {counts['removed']} | |", "", note, ""]
 
-    def block(title: str, items: list[dict], src: list[str], meta: list[dict], key: str, summaries: list[str], total_n: int):
-        out.extend([f"## {title} ({total_n})", ""])
-        if not items:
+    def more(shown: int, total_n: int) -> None:
+        if total_n > shown:
+            out.extend([f"…and {total_n - shown} more.", ""])
+
+    for title, kind in (("Added", "added"), ("Removed", "removed")):
+        out.extend([f"## {title} ({counts[kind]})", ""])
+        if not c[kind]:
             out.extend(["None.", ""])
-        for r, note in zip(items, summaries):
-            head = note or meta[r[key]]["heading"] or "(no heading)"
-            out.extend([f"**{head}**", ""])
-            if note and meta[r[key]]["heading"]:
-                out.extend([f"*Under: {meta[r[key]]['heading']}*", ""])
-            out.extend(["> " + _excerpt(src[r[key]]), ""])
-        if total_n > len(items):
-            out.extend([f"…and {total_n - len(items)} more.", ""])
+        for it in c[kind]:
+            out.extend([f"**{it['summary'] or it['heading'] or '(no heading)'}**", ""])
+            if it["summary"] and it["heading"]:
+                out.extend([f"*Under: {it['heading']}*", ""])
+            out.extend(["> " + it["text"], ""])
+        more(len(c[kind]), counts[kind])
 
-    block("Added", added, new, new_p, "new", notes[: len(added)], len(by["added"]))
-    block("Removed", gone, old, old_p, "old", notes[len(added):], len(removed))
-
-    out += [f"## Rewritten: same content, new wording ({len(by['rewritten'])})", ""]
-    for r in sorted(by["rewritten"], key=lambda r: r["ratio"])[:max_items]:
-        out += [f"**{new_p[r['new']]['heading'] or '(no heading)'}**", "",
-                "> *Previous:* " + _excerpt(old[r["old"]], 400), ">", "> *Current:* " + _excerpt(new[r["new"]], 400), ""]
-    if not by["rewritten"]:
+    out += [f"## Rewritten: same content, new wording ({counts['rewritten']})", ""]
+    for it in c["rewritten"]:
+        out += [f"**{it['heading'] or '(no heading)'}**", "",
+                "> *Previous:* " + it["previous"], ">", "> *Current:* " + it["current"], ""]
+    if not counts["rewritten"]:
         out += ["None.", ""]
-    elif len(by["rewritten"]) > max_items:
-        out += [f"…and {len(by['rewritten']) - max_items} more.", ""]
+    more(len(c["rewritten"]), counts["rewritten"])
 
-    out += [f"## Edited paragraphs ({len(by['edited'])})", "",
+    out += [f"## Edited paragraphs ({counts['edited']})", "",
             "Ordered from most to least changed. ~~Struck~~ words were removed and **bold** words were "
             "added; … marks omitted unchanged text.", ""]
-    for r in by["edited"][:max_items]:
-        out += [f"**{new_p[r['new']]['heading'] or '(no heading)'}** ({1 - r['ratio']:.0%} of words changed)", "",
-                "> " + inline_diff(old[r["old"]], new[r["new"]]), ""]
-    if len(by["edited"]) > max_items:
-        out += [f"…and {len(by['edited']) - max_items} more.", ""]
+    for it in c["edited"]:
+        out += [f"**{it['heading'] or '(no heading)'}** ({it['changed']:.0%} of words changed)", "",
+                "> " + _diff_markdown(it["diff"]), ""]
+    more(len(c["edited"]), counts["edited"])
+    return "\n".join(out)
 
-    return f"riskdiff_{cur.ticker}_{cur.filing_date.year}", "\n".join(out)
+
+def render(filings: pd.DataFrame, ticker: str, year: int | None, emb: dict, llm: dict | None,
+           max_items: int = 12) -> tuple[str, str]:
+    """Compare a 10-K's Risk Factors with the previous year's. Returns (report name, markdown)."""
+    c = compare(filings, ticker, year, emb, llm, max_items)
+    return f"riskdiff_{c['ticker']}_{c['current']['date'][:4]}", to_markdown(c)
+
+
+# ----------------------------------------------------------------- static demo
+
+DEMO = HOME / "docs" / "data"
+
+
+def _write_json(path: Path, obj) -> None:
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _rounded(c: dict) -> dict:
+    """A comparison with its fractions rounded, which keeps the demo files small."""
+    return {**c, "share": {k: round(v, 4) for k, v in c["share"].items()},
+            "edited": [{**e, "changed": round(e["changed"], 3)} for e in c["edited"]]}
+
+
+def export_demo(filings: pd.DataFrame, tickers: list[str], emb: dict, llm: dict | None,
+                max_items: int = 12) -> dict:
+    """Precompute the comparisons shown by the static demo page, docs/index.html.
+
+    For each ticker, every 10-K with a parsed Risk Factors section is compared
+    with the one before it; for a year with two 10-Ks the later one is used, as
+    in `pick_filings`. Writes docs/data/<TICKER>.json (one comparison per
+    filing year) and docs/data/index.json. Comparisons already in a company's
+    file are kept, so an interrupted run resumes; delete docs/data to compute
+    everything again. Returns the number of comparisons computed, kept and
+    failed.
+    """
+    DEMO.mkdir(parents=True, exist_ok=True)
+    stats = {"computed": 0, "kept": 0, "failed": 0}
+    companies = []
+    tenk = filings[(filings["form"] == "10-K") & filings["ticker"].isin(tickers)].sort_values("filing_date")
+    for ticker in tqdm(tickers, desc="demo"):
+        k = tenk[tenk["ticker"] == ticker]
+        k = k[[load_section(a, "risk") is not None for a in k["accession"]]].reset_index(drop=True)
+        pairs = {int(k.loc[i, "filing_date"].year): (k.iloc[i - 1], k.iloc[i]) for i in range(1, len(k))}
+        path = DEMO / f"{ticker}.json"
+        done = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        done = {y: v for y, v in done.items() if int(y) in pairs}
+        cache: dict = {}
+        for year, (prev, cur) in pairs.items():
+            if done.get(str(year), {}).get("current", {}).get("accession") == cur.accession:
+                stats["kept"] += 1
+                continue
+            try:
+                done[str(year)] = _rounded(compare_filings(prev, cur, emb, llm, max_items, cache))
+            except Exception as e:  # one unreadable filing should not stop the run
+                tqdm.write(f"skip {ticker} {year}: {e}")
+                stats["failed"] += 1
+                continue
+            stats["computed"] += 1
+            _write_json(path, dict(sorted(done.items())))
+        if done:
+            companies.append({"ticker": ticker, "name": k.iloc[-1]["name"], "years": sorted(map(int, done))})
+    names = filings.drop_duplicates("ticker").set_index("ticker")["name"]
+    shown = {c["ticker"] for c in companies}
+    _write_json(DEMO / "index.json", {
+        "generated": date.today().isoformat(), "embed_model": emb["model"],
+        "llm_model": llm["model"] if llm else None, "max_items": max_items, "selected": len(tickers),
+        "companies": companies,
+        # fewer than two 10-Ks with a Risk Factors section that could be read
+        "missing": [{"ticker": t, "name": names.get(t, "")} for t in tickers if t not in shown]})
+    return stats

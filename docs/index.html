@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk Factors Comparison</title>
+<meta name="description" content="What changed in the Risk Factors section of a company's 10-K since the previous year, for the largest US filers, 2016 to 2026.">
+<meta property="og:title" content="What changed in a company’s Risk Factors">
+<meta property="og:description" content="Year-over-year comparison of the Risk Factors in 10-K filings of the largest US filers: added and removed risks, rewording and word-level edits.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='3' width='22' height='26' rx='3' fill='%231c5cab'/%3E%3Crect x='9' y='9' width='14' height='2.5' rx='1' fill='%23fff'/%3E%3Crect x='9' y='14.5' width='10' height='2.5' rx='1' fill='%23fff'/%3E%3Crect x='9' y='20' width='12' height='2.5' rx='1' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --hairline: #e1e0d9;
+    --border: rgba(11, 11, 11, 0.10);
+    --link: #1c5cab;
+    --quote: #f3f2ee;
+    --focus: #2a78d6;
+    --ins-bg: #dff3e4;
+    --ins-fg: #0b5d1e;
+    --del-bg: #fbe4e4;
+    --del-fg: #8c1d18;
+    /* ordinal ramp, least to most changed (validated: one hue, monotone lightness) */
+    --s-unchanged: #86b6ef;
+    --s-edited: #3987e5;
+    --s-rewritten: #1c5cab;
+    --s-added: #0d366b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --hairline: #2c2c2a;
+      --border: rgba(255, 255, 255, 0.10);
+      --link: #86b6ef;
+      --quote: #222221;
+      --focus: #6da7ec;
+      --ins-bg: #133d24;
+      --ins-fg: #a6e3b5;
+      --del-bg: #4a1c1c;
+      --del-fg: #f2b8b5;
+      --s-unchanged: #184f95;
+      --s-edited: #2a78d6;
+      --s-rewritten: #6da7ec;
+      --s-added: #cde2fb;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --hairline: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.10);
+    --link: #86b6ef;
+    --quote: #222221;
+    --focus: #6da7ec;
+    --ins-bg: #133d24;
+    --ins-fg: #a6e3b5;
+    --del-bg: #4a1c1c;
+    --del-fg: #f2b8b5;
+    --s-unchanged: #184f95;
+    --s-edited: #2a78d6;
+    --s-rewritten: #6da7ec;
+    --s-added: #cde2fb;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  a { color: var(--link); text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  header.wrap { padding-top: 40px; padding-bottom: 8px; }
+  .eyebrow { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+  .eyebrow a { color: inherit; }
+  h1 { margin: 0 0 10px; font-size: clamp(26px, 4.4vw, 34px); line-height: 1.2; letter-spacing: -0.01em; }
+  .lede { margin: 0; max-width: 68ch; color: var(--ink-2); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin: 28px 0 20px; }
+  .controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .controls label.grow { flex: 1 1 280px; }
+  select {
+    font: inherit; font-size: 15px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-height: 40px; max-width: 100%;
+  }
+  .controls label.grow select { width: 100%; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .summary h2 { margin: 0 0 4px; font-size: 20px; line-height: 1.3; }
+  .filings { margin: 0 0 18px; color: var(--ink-2); font-size: 14px; }
+  .caption { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .bar { display: flex; gap: 2px; height: 16px; }
+  .seg { min-width: 2px; }
+  .seg:first-child { border-radius: 4px 0 0 4px; }
+  .seg:last-child { border-radius: 0 4px 4px 0; }
+  .seg:only-child { border-radius: 4px; }
+  .legend { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px 16px; font-size: 14px; }
+  .legend li { display: flex; align-items: flex-start; gap: 8px; }
+  .swatch { flex: none; width: 10px; height: 10px; border-radius: 2px; margin-top: 5px; }
+  .legend .lg { display: flex; flex-direction: column; line-height: 1.4; }
+  .legend .v { font-weight: 600; }
+  .legend .n { color: var(--ink-2); font-size: 13px; }
+  .removed-note { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--hairline); font-size: 14px; color: var(--ink-2); }
+
+  .tabs { display: flex; gap: 4px; margin: 28px 0 0; border-bottom: 1px solid var(--hairline); overflow-x: auto; scrollbar-width: none; }
+  .tabs button {
+    font: inherit; font-size: 15px; font-weight: 600; color: var(--ink-2); background: none; border: 0;
+    padding: 10px 12px; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap;
+  }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .tabs .count { font-weight: 400; color: var(--ink-2); margin-left: 4px; }
+
+  .panel { padding: 18px 0 8px; }
+  .intro { margin: 0 0 6px; color: var(--ink-2); font-size: 14px; }
+  .shown { margin: 0 0 18px; color: var(--ink-2); font-size: 14px; }
+  .item { padding: 16px 0; border-top: 1px solid var(--hairline); }
+  .item h3 { margin: 0 0 4px; font-size: 16px; line-height: 1.45; }
+  .under { margin: 0 0 8px; font-size: 14px; font-style: italic; color: var(--ink-2); }
+  .badge { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--ink-2); white-space: nowrap; vertical-align: 1px; }
+  blockquote { margin: 8px 0 0; padding: 10px 14px; background: var(--quote); border-left: 3px solid var(--hairline); border-radius: 0 6px 6px 0; font-size: 15px; overflow-wrap: anywhere; }
+  .pair { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 720px) { .pair { grid-template-columns: 1fr 1fr; } }
+  .pair .label { margin: 8px 0 0; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-2); }
+  .pair blockquote { margin-top: 4px; }
+  ins { background: var(--ins-bg); color: var(--ins-fg); text-decoration: none; border-radius: 3px; padding: 0 2px; }
+  del { background: var(--del-bg); color: var(--del-fg); border-radius: 3px; padding: 0 2px; }
+  .none { color: var(--ink-2); padding: 8px 0; }
+  .status { color: var(--ink-2); padding: 24px 0; }
+
+  footer.wrap { margin-top: 32px; padding-top: 20px; padding-bottom: 48px; border-top: 1px solid var(--hairline); font-size: 14px; color: var(--ink-2); }
+  footer h2 { margin: 0 0 6px; font-size: 15px; color: var(--ink); }
+  footer p { margin: 0 0 12px; max-width: 80ch; }
+
+  @media (max-width: 520px) {
+    header.wrap { padding-top: 28px; }
+    .card { padding: 16px; }
+    .tabs button { padding: 10px 8px; font-size: 14px; }
+  }
+  @media (forced-colors: active) {
+    .seg, .swatch { forced-color-adjust: none; border: 1px solid CanvasText; }
+  }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <p class="eyebrow"><a href="https://github.com/chensirui3/LLM-filing-signals">LLM filing signals</a> · demo</p>
+  <h1>What changed in a company’s Risk Factors</h1>
+  <p class="lede">Pick a company and a year to see how the Risk Factors section of its annual report (10-K) changed from the previous year’s: risks that were added or removed, paragraphs that were reworded, and word-level edits. Comparisons are precomputed for <span id="coverage">the largest US filers</span>.</p>
+</header>
+
+<main class="wrap">
+  <div class="controls">
+    <label class="grow">Company
+      <select id="company" aria-describedby="status"></select>
+    </label>
+    <label>10-K filed in
+      <select id="year"></select>
+    </label>
+  </div>
+
+  <div id="status" class="status" role="status">Loading…</div>
+
+  <section id="result" hidden>
+    <div class="card summary">
+      <h2 id="title"></h2>
+      <p class="filings" id="filings"></p>
+      <p class="caption" id="caption">Share of this year’s Risk Factors text</p>
+      <div class="bar" id="bar" role="img"></div>
+      <ul class="legend" id="legend"></ul>
+      <p class="removed-note" id="removed"></p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Kind of change" id="tabs"></div>
+    <div class="panel" role="tabpanel" id="panel" tabindex="0"></div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <h2>How the comparison works</h2>
+  <p>Each paragraph of the selected 10-K is matched to the most similar paragraph of the previous year’s 10-K using text embeddings (<code>nomic-embed-text</code>), then classified by how much of its wording is kept: <strong>unchanged</strong> (98% or more of the words), <strong>edited</strong> (60% or more), <strong>rewritten</strong> (fewer words in common but the same content, embedding similarity of at least 0.93) or <strong>added</strong>. Paragraphs of the previous 10-K that match nothing are <strong>removed</strong>. On 120 labelled paragraph pairs, 90% of the paragraphs the tool calls rewritten are rewrites, and it finds 68% of all rewrites; the rest are reported as added.</p>
+  <p>The one-line summaries of added and removed risks were written by a local language model (<span id="llm">Llama 3.1 8B</span>) and may be inaccurate; the quoted filing text is authoritative. Each section shows at most <span id="maxitems">12</span> paragraphs.</p>
+  <p id="missing" hidden></p>
+  <p id="about">Everything on this page was computed in advance from SEC EDGAR filings; nothing runs on a server. The code, and the research project it belongs to, are on <a href="https://github.com/chensirui3/LLM-filing-signals">GitHub</a>. This page is for research and education and is not investment advice.</p>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  const STATUSES = [
+    { key: "unchanged", label: "Unchanged" },
+    { key: "edited", label: "Edited" },
+    { key: "rewritten", label: "Rewritten" },
+    { key: "added", label: "Added" },
+  ];
+  const TABS = [
+    { key: "added", label: "Added",
+      intro: "Paragraphs with no counterpart in the previous 10-K, the least similar first. The bold line is the model’s one-line summary." },
+    { key: "removed", label: "Removed",
+      intro: "Paragraphs of the previous 10-K with no counterpart in this one, the least similar first. The bold line is the model’s one-line summary." },
+    { key: "rewritten", label: "Rewritten",
+      intro: "Paragraphs that keep the same content in different words, shown beside the closest paragraph of the previous 10-K, the most reworded first." },
+    { key: "edited", label: "Edited",
+      intro: "The same paragraph with some words changed, the most changed first. Removed words are struck through, added words are highlighted, and … marks unchanged text left out." },
+  ];
+  const DEFAULT = { ticker: "NVDA", year: 2023 };
+
+  const $ = (id) => document.getElementById(id);
+  const companySel = $("company"), yearSel = $("year"), statusEl = $("status"), resultEl = $("result");
+  const state = { index: null, files: new Map(), ticker: null, year: null, tab: "added", comparison: null, token: 0 };
+
+  function el(tag, props, ...children) {
+    const node = document.createElement(tag);
+    if (props) {
+      for (const [k, v] of Object.entries(props)) {
+        if (v === undefined || v === null || v === false) continue;
+        if (k === "class") node.className = v;
+        else if (k === "style") node.style.cssText = v;
+        else if (k in node && typeof v !== "string") node[k] = v;
+        else node.setAttribute(k, v);
+      }
+    }
+    for (const c of children.flat()) {
+      if (c === null || c === undefined || c === false) continue;
+      node.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+    return node;
+  }
+
+  const pct = (x) => {
+    const p = x * 100;
+    return (p > 0 && p < 1 ? "<1" : Math.round(p)) + "%";
+  };
+  const plural = (n, word) => `${n.toLocaleString("en-US")} ${word}${n === 1 ? "" : "s"}`;
+
+  async function getJSON(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+    return r.json();
+  }
+
+  function showStatus(text) {
+    statusEl.textContent = text;
+    statusEl.hidden = !text;
+  }
+
+  function parseHash() {
+    const m = decodeURIComponent(location.hash.slice(1)).match(/^([A-Za-z0-9.\-]+)(?:\/(\d{4}))?$/);
+    return m ? { ticker: m[1].toUpperCase(), year: m[2] ? Number(m[2]) : null } : null;
+  }
+
+  async function select(ticker, year) {
+    const companies = state.index.companies;
+    const company = companies.find((c) => c.ticker === ticker)
+      || companies.find((c) => c.ticker === DEFAULT.ticker) || companies[0];
+    const years = company.years;
+    if (!years.includes(year)) year = years[years.length - 1];
+
+    companySel.value = company.ticker;
+    if (state.ticker !== company.ticker) {
+      yearSel.replaceChildren(...[...years].reverse().map((y) => new Option(String(y), String(y))));
+    }
+    yearSel.value = String(year);
+    state.ticker = company.ticker;
+    state.year = year;
+    history.replaceState(null, "", `#${company.ticker}/${year}`);
+
+    const token = ++state.token;
+    let file = state.files.get(company.ticker);
+    if (!file) {
+      showStatus("Loading…");
+      try {
+        file = await getJSON(`data/${encodeURIComponent(company.ticker)}.json`);
+      } catch (e) {
+        if (token === state.token) showStatus(`Could not load the comparisons for ${company.ticker}.`);
+        return;
+      }
+      state.files.set(company.ticker, file);
+    }
+    if (token !== state.token) return;
+    const c = file[String(year)];
+    if (!c) {
+      showStatus(`No comparison for ${company.ticker} in ${year}.`);
+      return;
+    }
+    showStatus("");
+    state.comparison = c;
+    renderSummary(c);
+    renderTabs(c);
+    renderPanel(c);
+    resultEl.hidden = false;
+  }
+
+  function filingLink(f, text) {
+    return el("a", { href: f.url, target: "_blank", rel: "noopener" }, text);
+  }
+
+  function renderSummary(c) {
+    $("title").textContent = `${c.name} (${c.ticker})`;
+    $("filings").replaceChildren(
+      "10-K ", filingLink(c.current, `filed ${c.current.date}`),
+      " compared with the 10-K ", filingLink(c.previous, `filed ${c.previous.date}`),
+      `. Paragraphs compared: ${c.paragraphs.current} in this filing and ${c.paragraphs.previous} in the previous one.`
+    );
+
+    const parts = STATUSES.filter((s) => c.share[s.key] > 0);
+    $("bar").replaceChildren(...parts.map((s) => el("div", {
+      class: "seg",
+      style: `flex: ${c.share[s.key]} 1 0; background: var(--s-${s.key})`,
+      title: `${s.label}: ${plural(c.counts[s.key], "paragraph")}, ${pct(c.share[s.key])} of the text`,
+    })));
+    $("bar").setAttribute("aria-label", "Share of this year’s Risk Factors text: "
+      + STATUSES.map((s) => `${s.label.toLowerCase()} ${pct(c.share[s.key])}`).join(", "));
+
+    $("legend").replaceChildren(...STATUSES.map((s) => el("li", null,
+      el("span", { class: "swatch", style: `background: var(--s-${s.key})`, "aria-hidden": "true" }),
+      el("span", { class: "lg" },
+        el("span", null, `${s.label} `, el("span", { class: "v" }, pct(c.share[s.key]))),
+        el("span", { class: "n" }, plural(c.counts[s.key], "paragraph")))
+    )));
+    $("removed").textContent = c.counts.removed
+      ? `${plural(c.counts.removed, "paragraph")} of the previous 10-K ${c.counts.removed === 1 ? "was" : "were"} removed.`
+      : "No paragraphs of the previous 10-K were removed.";
+  }
+
+  function renderTabs(c) {
+    const tabs = $("tabs");
+    tabs.replaceChildren(...TABS.map((t) => el("button", {
+      type: "button", role: "tab", id: `tab-${t.key}`, "aria-controls": "panel",
+      "aria-selected": String(t.key === state.tab), tabindex: t.key === state.tab ? "0" : "-1",
+      onclick: () => { state.tab = t.key; renderTabs(c); renderPanel(c); },
+    }, t.label, el("span", { class: "count" }, String(c.counts[t.key])))));
+    $("panel").setAttribute("aria-labelledby", `tab-${state.tab}`);
+  }
+
+  $("tabs").addEventListener("keydown", (e) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key) || !state.comparison) return;
+    const i = TABS.findIndex((t) => t.key === state.tab);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? TABS.length - 1
+      : (i + (e.key === "ArrowRight" ? 1 : -1) + TABS.length) % TABS.length;
+    state.tab = TABS[next].key;
+    renderTabs(state.comparison);
+    renderPanel(state.comparison);
+    $(`tab-${state.tab}`).focus();
+    e.preventDefault();
+  });
+
+  function heading(text) {
+    return text || "(no heading)";
+  }
+
+  function diffNodes(segments) {
+    const out = [];
+    segments.forEach(([op, text], i) => {
+      if (i) out.push(" ");
+      out.push(op === "+" ? el("ins", null, text) : op === "-" ? el("del", null, text) : text);
+    });
+    return out;
+  }
+
+  function renderPanel(c) {
+    const tab = TABS.find((t) => t.key === state.tab);
+    const items = c[tab.key];
+    const total = c.counts[tab.key];
+    const nodes = [el("p", { class: "intro" }, tab.intro)];
+    if (total > items.length) {
+      nodes.push(el("p", { class: "shown" }, `Showing ${items.length} of ${total}.`));
+    }
+    if (!items.length) nodes.push(el("p", { class: "none" }, "None."));
+
+    for (const it of items) {
+      if (tab.key === "added" || tab.key === "removed") {
+        nodes.push(el("article", { class: "item" },
+          el("h3", null, it.summary || heading(it.heading)),
+          it.summary && it.heading ? el("p", { class: "under" }, `Under: ${it.heading}`) : null,
+          el("blockquote", null, it.text)));
+      } else if (tab.key === "rewritten") {
+        nodes.push(el("article", { class: "item" },
+          el("h3", null, heading(it.heading)),
+          el("div", { class: "pair" },
+            el("div", null, el("p", { class: "label" }, "Previous 10-K"), el("blockquote", null, it.previous)),
+            el("div", null, el("p", { class: "label" }, "This 10-K"), el("blockquote", null, it.current)))));
+      } else {
+        nodes.push(el("article", { class: "item" },
+          el("h3", null, heading(it.heading), el("span", { class: "badge" }, `${pct(it.changed)} of words changed`)),
+          el("blockquote", null, diffNodes(it.diff))));
+      }
+    }
+    $("panel").replaceChildren(...nodes);
+  }
+
+  async function init() {
+    try {
+      state.index = await getJSON("data/index.json");
+    } catch (e) {
+      showStatus("Could not load the data. If you opened this file directly, serve the folder instead: "
+        + "python -m http.server --directory docs");
+      return;
+    }
+    const idx = state.index;
+    if (idx.llm_model) $("llm").textContent = idx.llm_model;
+    $("maxitems").textContent = String(idx.max_items);
+    $("about").prepend(`Computed on ${idx.generated}. `);
+    const years = idx.companies.flatMap((c) => c.years);
+    if (years.length) {
+      $("coverage").textContent = `${idx.companies.length} of the ${idx.selected} largest US filers, `
+        + `for 10-Ks filed from ${Math.min(...years)} to ${Math.max(...years)}`;
+    }
+    if (idx.missing && idx.missing.length) {
+      $("missing").textContent = "Not included, because fewer than two of their 10-Ks have a Risk Factors section "
+        + "the parser can read: " + idx.missing.map((m) => (m.name ? `${m.name} (${m.ticker})` : m.ticker)).join(", ") + ".";
+      $("missing").hidden = false;
+    }
+
+    const companies = [...idx.companies].sort((a, b) => a.ticker.localeCompare(b.ticker));
+    companySel.replaceChildren(...companies.map((c) => new Option(`${c.ticker} · ${c.name}`, c.ticker)));
+    companySel.addEventListener("change", () => select(companySel.value, state.year));
+    yearSel.addEventListener("change", () => select(state.ticker, Number(yearSel.value)));
+    window.addEventListener("hashchange", () => {
+      const h = parseHash();
+      if (h && (h.ticker !== state.ticker || h.year !== state.year)) select(h.ticker, h.year);
+    });
+
+    const h = parseHash() || DEFAULT;
+    await select(h.ticker, h.year);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
